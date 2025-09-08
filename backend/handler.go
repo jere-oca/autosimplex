@@ -18,6 +18,6 @@ func process() func(c *gin.Context) {
 			return
 		}
 		// Procesar 'req.Matrix'
-		c.JSON(http.StatusOK, gin.H{"matriz_recibida": req.Matrix})
+		c.JSON(http.StatusOK, gin.H{"received_matrix": req.Matrix})
 	}
 }
