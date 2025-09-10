@@ -1,13 +1,13 @@
 package models
 
 type Objective struct {
-	Type         string    `json:"type"` // "max" o "min"
+	Type         string    `json:"type"` // "max" or "min"
 	Coefficients []float64 `json:"coefficients"`
 }
 
 type Constraint struct {
 	Coefficients []float64 `json:"coefficients"`
-	Operator     string    `json:"operator"` // <=, >=, =
+	Operator     string    `json:"operator"` // "<=", ">=", or "="
 	RHS          float64   `json:"rhs"`
 }
 
