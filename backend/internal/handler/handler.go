@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"net/http"
@@ -10,7 +10,7 @@ type MatrixRequest struct {
 	Matrix [][]float64 `json:"matrix"`
 }
 
-func process() func(c *gin.Context) {
+func Process() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req MatrixRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

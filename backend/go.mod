@@ -5,7 +5,6 @@ go 1.25.0
 require (
 	github.com/gin-gonic/gin v1.10.1
 	github.com/stretchr/testify v1.9.0
-	gonum.org/v1/gonum v0.16.0
 )
 
 require (
@@ -20,6 +19,7 @@ require (
 	github.com/go-playground/universal-translator v0.18.1 // indirect
 	github.com/go-playground/validator/v10 v10.20.0 // indirect
 	github.com/goccy/go-json v0.10.2 // indirect
+	github.com/google/go-cmp v0.6.0 // indirect
 	github.com/json-iterator/go v1.1.12 // indirect
 	github.com/klauspost/cpuid/v2 v2.2.7 // indirect
 	github.com/leodido/go-urn v1.4.0 // indirect

@@ -1,4 +1,4 @@
-package main
+package handler
 
 import (
 	"bytes"
@@ -14,7 +14,7 @@ import (
 func TestProcess_ValidMatrix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	matrix := [][]float64{
 		{1.1, 2.2},
@@ -38,7 +38,7 @@ func TestProcess_ValidMatrix(t *testing.T) {
 func TestProcess_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	body := []byte(`{"matrix": [ [1, 2], [3, "bad"] ]}`) // "bad" is not a float
 
@@ -59,7 +59,7 @@ func TestProcess_InvalidJSON(t *testing.T) {
 func TestProcess_MissingMatrix(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	body := []byte(`{}`)
 
