@@ -6,44 +6,41 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// Takes a maximize vector and the constraints as a matrix
 func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 
-	// original data
+	// Dimensiones de la matriz de restricciones sin los valores del lado derecho
 	constraintCount, variablesCount := constraints.Dims()
-	variablesCount-- // because last col represented the values to the right of <=
+	variablesCount--
+
 	totalVariables := constraintCount + variablesCount
 
-	// construct matrix A
+	// Matriz A: coeficientes de las restricciones
 	A := mat.DenseCopyOf(constraints.Grow(0, constraintCount-1))
 
-	// handle first vector manually to override b-values
+	// Se asignan las variables de holgura
 	tempVector := make([]float64, constraintCount, constraintCount)
-	for i := range tempVector {
-		tempVector[i] = 0
-	}
 	tempVector[0] = 1
 	A.SetCol(variablesCount, tempVector)
 
-	// we can start at 1, since we already handled the first vector
+	// Resto de la matriz identidad
 	for i := 1; i < constraintCount; i++ {
 		A.Set(i, i+variablesCount, 1)
 	}
 
-	// construct c by copying values over
+	// Vector c: coeficientes de la función objetivo y variables de holgura cero
 	c := mat.NewDense(1, totalVariables, make([]float64, totalVariables, totalVariables))
 	for i := 0; i < maximize.Len(); i++ {
 		c.Set(0, i, maximize.At(i, 0))
 	}
 
-	// construct b vector
+	// Vector b: lado derecho de las restricciones
 	bTemp := make([]float64, constraintCount, constraintCount)
 	for i := 0; i < constraintCount; i++ {
 		bTemp[i] = constraints.At(i, variablesCount)
 	}
 	b := mat.NewVecDense(constraintCount, bTemp)
 
-	// initialize current base variables (first iteration: all slack variables)
+	// Variables básicas iniciales
 	currentBaseVars := make([]int, constraintCount, constraintCount)
 	for i := range currentBaseVars {
 		currentBaseVars[i] = variablesCount + i + 1
@@ -57,7 +54,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 
 	fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
 
-	// start iterating
+	// Iteraciones
 	iterations := 0
 	maxIterations := 10
 	for {
@@ -65,9 +62,10 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 			break
 		}
 
-		// step 1: solve (y^T)(B) = c_{B}^T
+		// Paso 1: resolver el sistema dual (y^T)(B) = (c_B)^T
+		// Se construye la matriz B de columnas básicas y se obtienen los multiplicadores simplex 'y'
 		B := mat.NewDense(constraintCount, constraintCount, nil)
-		AT := mat.DenseCopyOf(A.T())
+		AT := mat.DenseCopyOf(A.T()) // Transpuesta
 		cBData := make([]float64, constraintCount, constraintCount)
 		for i := range currentBaseVars {
 			B.SetCol(i, AT.RawRowView(currentBaseVars[i]-1))
@@ -80,14 +78,15 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 		Bi := mat.DenseCopyOf(B)
 		err := Bi.Inverse(B)
 		if err != nil {
-			panic("Inverse went wrong!")
+			panic("Error en matriz inversa!")
 		}
 		fmt.Printf("Bi matrix:\n %v\n\n", mat.Formatted(Bi, mat.Prefix(" "), mat.Excerpt(8)))
 		y.Mul(y, Bi)
 		fmt.Printf("y^T vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
 
-		// step 2: calculate y^T A_N and compare to c_{N}^T component-wise
-		// find non-base variables and build A_N and c_{N}^T
+		// Paso 2: calcular y^T A_N y comparar con c_{N}^T component-wise
+		// Paso 2: calcular costos reducidos
+		// Matriz de variables no básicas
 		AN := mat.NewDense(constraintCount, variablesCount, nil)
 		cNT := mat.NewDense(1, variablesCount, nil)
 		var currentNonBaseVars []int
@@ -103,6 +102,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 			cNT.SetCol(i, []float64{c.At(0, currentNonBaseVars[i]-1)})
 		}
 
+		// Costos reducidos (si todos <= 0, la solución es óptima)
 		yTAN := mat.NewDense(1, variablesCount, nil)
 		yTAN.Mul(y, AN)
 
@@ -114,11 +114,11 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 		var largestVal float64
 		hasLargestVal := false
 		a := mat.NewDense(constraintCount, 1, nil)
+
+		// Paso 3: elegir variable entrante
 		for i := range currentNonBaseVars {
-			// we found possible new base var
 			if cNT.At(0, i) > yTAN.At(0, i) {
-				// it is larger than the largest value we found so far
-				// and the index is smaller than the one of the largest value
+				// Mayor que el máximo valor actual y de índice menor que el del máximo actual
 				if !hasLargestVal || cNT.At(0, i) >= largestVal {
 					if currentNonBaseVars[i] < newBaseVar {
 						newBaseVar = currentNonBaseVars[i]
@@ -129,12 +129,13 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 			}
 		}
 		fmt.Printf("new base var:\n %v\n\n", newBaseVar)
+
+		// Si no hay mejora posible, se devuelve la función objetivo óptima
 		if !hasLargestVal {
-			// no appropriate value could be found -> algorithm terminates
 			var result float64
 			for i := range currentBaseVars {
 				baseVarIndex := currentBaseVars[i] - 1
-				if baseVarIndex < variablesCount { // to avoid accessing slack variables
+				if baseVarIndex < variablesCount { // evitar variables de holgura
 					fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
 					result += maximize.At(baseVarIndex, 0) * b.At(i, 0)
 				}
@@ -142,16 +143,16 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 			return result
 		}
 
+		// Paso 4: calcular dirección y paso permitido
 		a.SetCol(0, AT.RawRowView(newBaseVar-1))
 
 		fmt.Printf("a vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
 
-		// step 3: calculate Bd = a
 		a.Mul(Bi, a)
 
 		fmt.Printf("d vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
 
-		// step 4: find largest t so that b - t * d ≥ 0
+		// Paso 5: máximo 't' posible tal que b - t * d <= 0 (determina qué variable sale de la base)
 		lowest := -1.0
 		lowestIndex := -1
 		lowestValueOfT := 0.0
@@ -173,7 +174,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 			return 0
 		}
 
-		// step 5: update
+		// Paso 6: actualizar la base y el vector 'b'
 		for i := range currentBaseVars {
 			if i == lowestIndex {
 				b.SetVec(i, lowest)
