@@ -6,7 +6,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
+func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 
 	// Dimensiones de la matriz de restricciones sin los valores del lado derecho
 	constraintCount, variablesCount := constraints.Dims()
@@ -133,14 +133,17 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 		// Si no hay mejora posible, se devuelve la función objetivo óptima
 		if !hasLargestVal {
 			var result float64
+			solution := make([]float64, maximize.Len())
 			for i := range currentBaseVars {
 				baseVarIndex := currentBaseVars[i] - 1
 				if baseVarIndex < variablesCount { // evitar variables de holgura
 					fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
-					result += maximize.At(baseVarIndex, 0) * b.At(i, 0)
+					val := b.At(i, 0)
+					result += maximize.At(baseVarIndex, 0) * val
+					solution[baseVarIndex] = val
 				}
 			}
-			return result
+			return result, solution
 		}
 
 		// Paso 4: calcular dirección y paso permitido
@@ -171,7 +174,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 		}
 		if lowest <= 0 {
 			fmt.Println("couldn't find appropriate t value")
-			return 0
+			return 0, nil
 		}
 
 		// Paso 6: actualizar la base y el vector 'b'
@@ -192,7 +195,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) float64 {
 		iterations++
 	}
 
-	return 0
+	return 0, nil
 }
 
 func contains(s []int, e int) bool {
