@@ -61,7 +61,7 @@ func TestSimplexFractions(t *testing.T) {
 		1, 5, 2.1, 3, 13})
 
 	actualResult, actualSolution := Solve(maximize, constraints)
-	var expectedResult float64 = 12.8
+	var expectedResult = 12.8
 	var expectedSolution = []float64{4, 0, 0, 0}
 
 	if actualResult != expectedResult {

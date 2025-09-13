@@ -21,7 +21,6 @@ func TestProcess_ValidMatrix(t *testing.T) {
 		{3.3, 4.4},
 	}
 	body, _ := json.Marshal(gin.H{"matrix": matrix})
-
 	req, _ := http.NewRequest(http.MethodPost, "/process", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
 	w := httptest.NewRecorder()
@@ -40,7 +39,7 @@ func TestProcess_InvalidJSON(t *testing.T) {
 	router := gin.New()
 	router.POST("/process", process())
 
-	body := []byte(`{"matrix": [ [1, 2], [3, "bad"] ]}`) // "bad" is not a float
+	body := []byte(`{"matrix": [ [1, 2], [3, "bad"] ]}`)
 
 	req, _ := http.NewRequest(http.MethodPost, "/process", bytes.NewBuffer(body))
 	req.Header.Set("Content-Type", "application/json")
