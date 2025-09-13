@@ -31,8 +31,8 @@ func validateReqConstraints(c *gin.Context, rows int, cols int, vars []float64) 
 }
 
 func validateReqObjective(c *gin.Context, n int, coefs []float64) bool {
-	if n <= 1 {
-		c.JSON(http.StatusBadRequest, gin.H{"error": "La cantidad de variables de decisión debe ser mayor a 1"})
+	if n <= 0 {
+		c.JSON(http.StatusBadRequest, gin.H{"error": "La cantidad de variables de decisión debe ser mayor a 0"})
 		return true
 	}
 	if len(coefs) != n {
