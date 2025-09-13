@@ -46,19 +46,20 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		currentBaseVars[i] = variablesCount + i + 1
 	}
 
-	fmt.Printf("Current base vars:\n %v\n\n", currentBaseVars)
-
-	fmt.Printf("A matrix:\n %v\n\n", mat.Formatted(A, mat.Prefix(" "), mat.Excerpt(8)))
-
-	fmt.Printf("c vector:\n %v\n\n", mat.Formatted(c, mat.Prefix(" "), mat.Excerpt(8)))
-
-	fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
+	// Se utilizarán para mostrar el progreso al usuario
+	//fmt.Printf("Current base vars:\n %v\n\n", currentBaseVars)
+	//
+	//fmt.Printf("A matrix:\n %v\n\n", mat.Formatted(A, mat.Prefix(" "), mat.Excerpt(8)))
+	//
+	//fmt.Printf("c vector:\n %v\n\n", mat.Formatted(c, mat.Prefix(" "), mat.Excerpt(8)))
+	//
+	//fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
 
 	// Iteraciones
+	const maxSimplexIterations = 10
 	iterations := 0
-	maxIterations := 10
 	for {
-		if iterations > maxIterations {
+		if iterations > maxSimplexIterations {
 			break
 		}
 
@@ -71,18 +72,18 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 			B.SetCol(i, AT.RawRowView(currentBaseVars[i]-1))
 			cBData[i] = c.At(0, currentBaseVars[i]-1)
 		}
-		fmt.Printf("B matrix:\n %v\n\n", mat.Formatted(B, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("B matrix:\n %v\n\n", mat.Formatted(B, mat.Prefix(" "), mat.Excerpt(8)))
 		y := mat.NewDense(1, constraintCount, cBData)
-		fmt.Printf("cBT vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("cBT vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
 
 		Bi := mat.DenseCopyOf(B)
 		err := Bi.Inverse(B)
 		if err != nil {
 			panic("Error en matriz inversa!")
 		}
-		fmt.Printf("Bi matrix:\n %v\n\n", mat.Formatted(Bi, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("Bi matrix:\n %v\n\n", mat.Formatted(Bi, mat.Prefix(" "), mat.Excerpt(8)))
 		y.Mul(y, Bi)
-		fmt.Printf("y^T vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("y^T vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
 
 		// Paso 2: calcular y^T A_N y comparar con c_{N}^T component-wise
 		// Paso 2: calcular costos reducidos
@@ -95,7 +96,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 				currentNonBaseVars = append(currentNonBaseVars, i)
 			}
 		}
-		fmt.Printf("Non-Base vars:\n %v\n\n", currentNonBaseVars)
+		//fmt.Printf("Non-Base vars:\n %v\n\n", currentNonBaseVars)
 
 		for i := range currentNonBaseVars {
 			AN.SetCol(i, AT.RawRowView(currentNonBaseVars[i]-1))
@@ -106,9 +107,9 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		yTAN := mat.NewDense(1, variablesCount, nil)
 		yTAN.Mul(y, AN)
 
-		fmt.Printf("y^T A_N vector:\n %v\n\n", mat.Formatted(yTAN, mat.Prefix(" "), mat.Excerpt(8)))
-		fmt.Printf("AN matrix:\n %v\n\n", mat.Formatted(AN, mat.Prefix(" "), mat.Excerpt(8)))
-		fmt.Printf("cNT vector:\n %v\n\n", mat.Formatted(cNT, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("y^T A_N vector:\n %v\n\n", mat.Formatted(yTAN, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("AN matrix:\n %v\n\n", mat.Formatted(AN, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("cNT vector:\n %v\n\n", mat.Formatted(cNT, mat.Prefix(" "), mat.Excerpt(8)))
 
 		newBaseVar := variablesCount + constraintCount + 1
 		var largestVal float64
@@ -128,7 +129,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 				}
 			}
 		}
-		fmt.Printf("new base var:\n %v\n\n", newBaseVar)
+		//fmt.Printf("new base var:\n %v\n\n", newBaseVar)
 
 		// Si no hay mejora posible, se devuelve la función objetivo óptima
 		if !hasLargestVal {
@@ -137,7 +138,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 			for i := range currentBaseVars {
 				baseVarIndex := currentBaseVars[i] - 1
 				if baseVarIndex < variablesCount { // evitar variables de holgura
-					fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
+					//fmt.Printf("b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
 					val := b.At(i, 0)
 					result += maximize.At(baseVarIndex, 0) * val
 					solution[baseVarIndex] = val
@@ -149,11 +150,11 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		// Paso 4: calcular dirección y paso permitido
 		a.SetCol(0, AT.RawRowView(newBaseVar-1))
 
-		fmt.Printf("a vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("a vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
 
 		a.Mul(Bi, a)
 
-		fmt.Printf("d vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("d vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
 
 		// Paso 5: máximo 't' posible tal que b - t * d <= 0 (determina qué variable sale de la base)
 		lowest := -1.0
@@ -186,11 +187,11 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 				b.SetVec(i, b.At(i, 0)-lowestValueOfT*a.At(i, 0))
 			}
 		}
-		fmt.Printf("new b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
-		fmt.Printf("new base vars:\n %v\n\n", currentBaseVars)
-
-		fmt.Println("--------------------------------------------------------")
-		fmt.Printf("iteration: %v\n", iterations)
+		//fmt.Printf("new b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
+		//fmt.Printf("new base vars:\n %v\n\n", currentBaseVars)
+		//
+		//fmt.Println("--------------------------------------------------------")
+		//fmt.Printf("iteration: %v\n", iterations)
 
 		iterations++
 	}
