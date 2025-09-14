@@ -1,17 +1,17 @@
 package models
 
 type Objective struct {
-	Type         string    `json:"type"` // "max" or "min"
+	N            int       `json:"n"`
 	Coefficients []float64 `json:"coefficients"`
 }
 
-type Constraint struct {
-	Coefficients []float64 `json:"coefficients"`
-	Operator     string    `json:"operator"` // "<=", ">=", or "="
-	RHS          float64   `json:"rhs"`
+type Constraints struct {
+	Rows int       `json:"rows"`
+	Cols int       `json:"cols"`
+	Vars []float64 `json:"vars"`
 }
 
 type SimplexRequest struct {
-	Objective   Objective    `json:"objective"`
-	Constraints []Constraint `json:"constraints"`
+	Objective   Objective   `json:"objective"`
+	Constraints Constraints `json:"constraints"`
 }
