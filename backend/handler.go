@@ -1,6 +1,7 @@
 package main
 
 import (
+	"autosimplex/internal/models"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -9,7 +10,7 @@ import (
 
 func process() func(c *gin.Context) {
 	return func(c *gin.Context) {
-		var req SimplexRequest
+		var req models.SimplexRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
 			c.JSON(http.StatusBadRequest, gin.H{
 				"error": err.Error()})
