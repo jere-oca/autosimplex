@@ -38,5 +38,18 @@ Utilizamos una metodología SCRUM, mediante iteraciones de 2 semanas. Cada itera
    go run .
    ```
    - No correr `run main.go`, ya que se requieren más archivos que el principal.
+
+3.1. Ejecutar el Container:
+```bash 
+
+docker build -t  autosimplex:1.25 .
+
+docker run -it --rm -p 8080:8080 autosimplex:1.25
+
+```
    
+
 4. Podrá acceder a la API en `http://localhost:8080`.
+
+
+
