@@ -1,14 +1,15 @@
-package main
+package handler
 
 import (
 	"autosimplex/internal/models"
+	"autosimplex/internal/simplex"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
 	"gonum.org/v1/gonum/mat"
 )
 
-func process() func(c *gin.Context) {
+func Process() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req models.SimplexRequest
 		if err := c.ShouldBindJSON(&req); err != nil {
@@ -34,7 +35,7 @@ func process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-		result, solution := Solve(objective, constraintMatrix)
+		result, solution := simplex.Solve(objective, constraintMatrix)
 
 		c.JSON(http.StatusOK, gin.H{
 			"optimal_value": result,
