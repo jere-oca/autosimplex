@@ -1,7 +1,8 @@
-package main
+package handler
 
 import (
 	"autosimplex/internal/models"
+	"autosimplex/internal/simplex"
 	"net/http"
 
 	"github.com/gin-gonic/gin"
@@ -34,7 +35,7 @@ func process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-		result, solution := Solve(objective, constraintMatrix)
+		result, solution := simplex.Solve(objective, constraintMatrix)
 
 		c.JSON(http.StatusOK, gin.H{
 			"optimal_value": result,
