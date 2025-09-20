@@ -9,7 +9,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-func process() func(c *gin.Context) {
+func Process() func(c *gin.Context) {
 	return func(c *gin.Context) {
 		var req models.SimplexRequest
 		if err := c.ShouldBindJSON(&req); err != nil {

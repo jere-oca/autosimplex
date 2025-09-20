@@ -14,7 +14,7 @@ import (
 func TestProcess_ValidRequest(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"objective": map[string]interface{}{
@@ -44,7 +44,7 @@ func TestProcess_ValidRequest(t *testing.T) {
 func TestProcess_InvalidConstraints(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	// filas y columnas no coinciden con cantidad de vars
 	body, _ := json.Marshal(map[string]interface{}{
@@ -74,7 +74,7 @@ func TestProcess_InvalidConstraints(t *testing.T) {
 func TestProcess_InvalidObjective(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	body, _ := json.Marshal(map[string]interface{}{
 		"objective": map[string]interface{}{
@@ -103,7 +103,7 @@ func TestProcess_InvalidObjective(t *testing.T) {
 func TestProcess_InvalidJSON(t *testing.T) {
 	gin.SetMode(gin.TestMode)
 	router := gin.New()
-	router.POST("/process", process())
+	router.POST("/process", Process())
 
 	body := []byte(`{"objective": {"n": 2, "coefficients": [1, "bad"]}, "constraints": {"rows": 1, "cols": 1, "vars": [1]}}`)
 
