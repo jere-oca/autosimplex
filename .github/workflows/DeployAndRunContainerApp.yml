@@ -1,0 +1,62 @@
+name: Deploy and Run Container App
+env:
+  REPO_NAME: ${{ github.event.repository.name }}
+  IMAGE_TAG: ${{ startsWith(github.ref, 'refs/tags/v') && github.ref_name || github.sha }}
+on:
+  workflow_dispatch:
+#  push:
+#    tags:
+#      - 'v*.*.*'
+permissions:
+  id-token: write
+  contents: read
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: 'Checkout GitHub Action'
+      uses: actions/checkout@v5
+
+    - name: 'Login via Docker'
+      uses: azure/docker-login@v2
+      with:
+        login-server: ${{ secrets.ACR_NAME_URL }}
+        username: ${{ secrets.REGISTRY_USERNAME }}
+        password: ${{ secrets.REGISTRY_PASSWORD }}
+    - run: |
+        docker build . -t ${{ secrets.ACR_NAME_URL }}/${{env.REPO_NAME}}:${{ env.IMAGE_TAG }}
+        docker push ${{ secrets.ACR_NAME_URL }}/${{env.REPO_NAME}}:${{ env.IMAGE_TAG }}
+      
+  deploy:
+    needs: build
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        shell: bash
+    steps:
+    - name: 'Login via Azure CLI'
+      uses: azure/login@v2
+      with:
+        creds: ${{ secrets.AZURE_CREDENTIALS }}
+    
+    - name: 'Deploy Container App'
+      uses: azure/container-apps-deploy-action@v1
+      with:
+        containerAppEnvironment: ${{ secrets.AZURE_CONTAINER_APP_ENVIRONMENT }}
+        containerAppName: simplex-container-app
+        resourceGroup: ${{ secrets.AZURE_RESOURCE_GROUP }}
+        imageToDeploy: ${{ secrets.ACR_NAME_URL }}/${{env.REPO_NAME}}:${{ env.IMAGE_TAG }}
+        acrName: ${{ secrets.ACR_NAME }}
+        acrUsername: ${{ secrets.REGISTRY_USERNAME }}
+        acrPassword: ${{ secrets.REGISTRY_PASSWORD }}
+        targetPort: 8080
+        ingress: 'external'
+    
+    - name: 'logout'
+      run: |
+        az logout
+      
