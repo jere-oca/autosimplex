@@ -2,6 +2,7 @@ package simplex
 
 import (
 	"fmt"
+	"slices"
 
 	"gonum.org/v1/gonum/mat"
 )
@@ -18,7 +19,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 	A := mat.DenseCopyOf(constraints.Grow(0, constraintCount-1))
 
 	// Se asignan las variables de holgura
-	tempVector := make([]float64, constraintCount, constraintCount)
+	tempVector := make([]float64, constraintCount)
 	tempVector[0] = 1
 	A.SetCol(variablesCount, tempVector)
 
@@ -28,20 +29,20 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 	}
 
 	// Vector c: coeficientes de la función objetivo y variables de holgura cero
-	c := mat.NewDense(1, totalVariables, make([]float64, totalVariables, totalVariables))
+	c := mat.NewDense(1, totalVariables, make([]float64, totalVariables))
 	for i := 0; i < maximize.Len(); i++ {
 		c.Set(0, i, maximize.At(i, 0))
 	}
 
 	// Vector b: lado derecho de las restricciones
-	bTemp := make([]float64, constraintCount, constraintCount)
-	for i := 0; i < constraintCount; i++ {
+	bTemp := make([]float64, constraintCount)
+	for i := range constraintCount {
 		bTemp[i] = constraints.At(i, variablesCount)
 	}
 	b := mat.NewVecDense(constraintCount, bTemp)
 
 	// Variables básicas iniciales
-	currentBaseVars := make([]int, constraintCount, constraintCount)
+	currentBaseVars := make([]int, constraintCount)
 	for i := range currentBaseVars {
 		currentBaseVars[i] = variablesCount + i + 1
 	}
@@ -67,7 +68,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		// Se construye la matriz B de columnas básicas y se obtienen los multiplicadores simplex 'y'
 		B := mat.NewDense(constraintCount, constraintCount, nil)
 		AT := mat.DenseCopyOf(A.T()) // Transpuesta
-		cBData := make([]float64, constraintCount, constraintCount)
+		cBData := make([]float64, constraintCount)
 		for i := range currentBaseVars {
 			B.SetCol(i, AT.RawRowView(currentBaseVars[i]-1))
 			cBData[i] = c.At(0, currentBaseVars[i]-1)
@@ -200,10 +201,5 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 }
 
 func contains(s []int, e int) bool {
-	for _, a := range s {
-		if a == e {
-			return true
-		}
-	}
-	return false
+	return slices.Contains(s, e)
 }
