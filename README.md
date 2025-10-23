@@ -6,11 +6,6 @@
 
 Utilizamos la metodología SCRUM, mediante iteraciones de 2 semanas. Cada iteración cuenta con una planificación, al menos una reunión semanal de seguimiento y una retrospectiva al finalizar.
 
-## Tecnologías
-
-- Lenguaje + framework propuesto: [Go](https://go.dev/) + [Gin](https://gin-gonic.com/).
-- Librería: [Gonum](https://www.gonum.org/)
-
 ### Integrantes
 
 - Bayinay, Federico
@@ -18,9 +13,39 @@ Utilizamos la metodología SCRUM, mediante iteraciones de 2 semanas. Cada iterac
 - Sabio, Santiago
 - Sanz, Lautaro
 
+## Tecnologías
+
+Backend:
+  - [Go](https://go.dev/) + [Gin](https://gin-gonic.com/).
+  - Librería: [Gonum](https://www.gonum.org/)
+
+Frontend:
+  - Vite + Preact
+
 # Instalación
 
-> Se requiere tener instalado [Go](https://go.dev/doc/install).
+## Docker
+
+> Se requiere [Docker](https://www.docker.com/get-started/).
+
+1. Clonar el repositorio:
+
+   ```bash
+   git clone https://github.com/jere-oca/autosimplex
+   cd autosimplex/
+   ```
+
+2. Levantar los contenedores:
+ 
+   ```bash
+   docker compose up -d
+   ```
+   
+El frontend se ejecutará en http://localhost:3000/.
+
+## Local
+
+> Se requiere [Go](https://go.dev/doc/install) y [Node.js](https://nodejs.org/es/download).
 
 1. Clonar el repositorio:
 
@@ -28,8 +53,6 @@ Utilizamos la metodología SCRUM, mediante iteraciones de 2 semanas. Cada iterac
    git clone https://github.com/jere-oca/autosimplex
    cd autosimplex/backend/
    ```
-
-## Local
 
 2. Instalar las dependencias:
  
@@ -42,27 +65,24 @@ Utilizamos la metodología SCRUM, mediante iteraciones de 2 semanas. Cada iterac
    ```bash
    go run .
    ```
-   - No correr `run main.go`, ya que se requieren más archivos que el principal.
 
-## Docker
+La API se ejecutará en http://localhost:8080/.
+   
+4. Correr el frontend:
 
-> Requiere tener instalado [Docker](https://www.docker.com/get-started/)
+   ```bash
+   cd ../frontend
+   ```
+   
+   ```bash
+   npm run dev
+   ```
 
-1. Construir imagen:
-
-    ```bash
-    docker build -t  autosimplex ./backend/
-    ```
-
-2. Correr:
-
-    ```bash
-    docker run -it --rm -p 8080:8080 autosimplex
-    ```
+Se ejecutará en http://localhost:5173/.
 
 # Testing
 
-`curl` de prueba:
+Ejecutar `curl` de prueba:
 
 ```bash
 curl -X POST http://localhost:8080/process \
