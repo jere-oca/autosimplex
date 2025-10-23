@@ -16,12 +16,12 @@ func TestProcess_ValidRequest(t *testing.T) {
 	router := gin.New()
 	router.POST("/process", process())
 
-	body, _ := json.Marshal(map[string]interface{}{
-		"objective": map[string]interface{}{
+	body, _ := json.Marshal(map[string]any{
+		"objective": map[string]any{
 			"n":            2,
 			"coefficients": []float64{1, 2},
 		},
-		"constraints": map[string]interface{}{
+		"constraints": map[string]any{
 			"rows": 2,
 			"cols": 2,
 			"vars": []float64{1, 2, 3, 4},
@@ -34,7 +34,7 @@ func TestProcess_ValidRequest(t *testing.T) {
 	router.ServeHTTP(w, req)
 
 	assert.Equal(t, http.StatusOK, w.Code)
-	var resp map[string]interface{}
+	var resp map[string]any
 	err := json.Unmarshal(w.Body.Bytes(), &resp)
 	assert.NoError(t, err)
 	assert.Contains(t, resp, "optimal_value")
@@ -47,12 +47,12 @@ func TestProcess_InvalidConstraints(t *testing.T) {
 	router.POST("/process", process())
 
 	// filas y columnas no coinciden con cantidad de vars
-	body, _ := json.Marshal(map[string]interface{}{
-		"objective": map[string]interface{}{
+	body, _ := json.Marshal(map[string]any{
+		"objective": map[string]any{
 			"n":            2,
 			"coefficients": []float64{1, 2},
 		},
-		"constraints": map[string]interface{}{
+		"constraints": map[string]any{
 			"rows": 2,
 			"cols": 2,
 			"vars": []float64{1, 2, 3}, // debería ser 4
@@ -76,12 +76,12 @@ func TestProcess_InvalidObjective(t *testing.T) {
 	router := gin.New()
 	router.POST("/process", process())
 
-	body, _ := json.Marshal(map[string]interface{}{
-		"objective": map[string]interface{}{
+	body, _ := json.Marshal(map[string]any{
+		"objective": map[string]any{
 			"n":            2,
 			"coefficients": []float64{1}, // longitud incorrecta
 		},
-		"constraints": map[string]interface{}{
+		"constraints": map[string]any{
 			"rows": 1,
 			"cols": 1,
 			"vars": []float64{1},
