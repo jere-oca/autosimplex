@@ -27,7 +27,7 @@ func TestSimplexPositives(t *testing.T) {
 		4, 1, 2, 11,
 		3, 4, 2, 8})
 
-	actualResult, _ := Solve(maximize, constraints)
+	actualResult, _, _ := Solve(maximize, constraints)
 	var expectedResult float64 = 13
 
 	if actualResult != expectedResult {
@@ -43,7 +43,7 @@ func TestSimplexNegatives(t *testing.T) {
 		2, -3, -1, -7, 1,
 		2, 1, 1, 3, 3})
 
-	actualResult, _ := Solve(maximize, constraints)
+	actualResult, _, _ := Solve(maximize, constraints)
 	var expectedResult float64 = 7
 
 	if actualResult != expectedResult {
@@ -60,8 +60,8 @@ func TestSimplexFractions(t *testing.T) {
 		0, 1, 1, .8, 7,
 		1, 5, 2.1, 3, 13})
 
-	actualResult, actualSolution := Solve(maximize, constraints)
-	var expectedResult = 12.8
+	actualResult, actualSolution, _ := Solve(maximize, constraints)
+ 	var expectedResult = 12.8
 	var expectedSolution = []float64{4, 0, 0, 0}
 
 	if actualResult != expectedResult {

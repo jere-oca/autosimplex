@@ -35,11 +35,13 @@ func Process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-		result, solution := simplex.Solve(objective, constraintMatrix)
+		// Ahora Solve retorna también los pasos
+		result, solution, steps := simplex.Solve(objective, constraintMatrix)
 
 		c.JSON(http.StatusOK, gin.H{
 			"optimal_value": result,
 			"solution":      solution,
+			"steps":         steps,
 		})
 	}
 }
