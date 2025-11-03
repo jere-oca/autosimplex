@@ -1,0 +1,208 @@
+:root {
+  --primary-color: #3b82f6;
+  --primary-dark: #2563eb;
+  --success-color: #10b981;
+  --error-color: #ef4444;
+  --border-color: #e5e7eb;
+  --text-color: #374151;
+  --bg-color: #f9fafb;
+}
+
+* {
+  box-sizing: border-box;
+}
+
+html {
+  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', 'Roboto', sans-serif;
+  line-height: 1.6;
+  color: var(--text-color);
+}
+
+body {
+  margin: 0;
+  padding: 0;
+  background-color: var(--bg-color);
+}
+
+.container {
+  max-width: 1000px;
+  margin: 0 auto;
+  padding: 2rem;
+}
+
+h1 {
+  color: var(--primary-color);
+  text-align: center;
+  margin-bottom: 2rem;
+  font-size: 2.5rem;
+  font-weight: 700;
+}
+
+h2 {
+  color: var(--text-color);
+  margin-bottom: 1rem;
+  font-size: 1.5rem;
+  border-bottom: 2px solid var(--primary-color);
+  padding-bottom: 0.5rem;
+}
+
+.config-section, .objective-section, .constraints-section, .solve-section, .result-section {
+  background: white;
+  border-radius: 12px;
+  padding: 1.5rem;
+  margin-bottom: 2rem;
+  box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1);
+}
+
+.config-inputs {
+  display: flex;
+  gap: 2rem;
+  flex-wrap: wrap;
+}
+
+.config-inputs label, .objective-inputs label {
+  display: flex;
+  flex-direction: column;
+  gap: 0.5rem;
+  font-weight: 600;
+}
+
+.objective-inputs {
+  display: flex;
+  gap: 1rem;
+  flex-wrap: wrap;
+}
+
+.objective-inputs label {
+  min-width: 100px;
+}
+
+input[type="number"] {
+  padding: 0.75rem;
+  border: 2px solid var(--border-color);
+  border-radius: 8px;
+  font-size: 1rem;
+  transition: border-color 0.2s;
+}
+
+input[type="number"]:focus {
+  outline: none;
+  border-color: var(--primary-color);
+  box-shadow: 0 0 0 3px rgba(59, 130, 246, 0.1);
+}
+
+.constraints-table {
+  overflow-x: auto;
+}
+
+.constraint-row {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin-bottom: 1rem;
+  flex-wrap: wrap;
+}
+
+.constraint-label {
+  font-weight: 600;
+  min-width: 120px;
+  color: var(--text-color);
+}
+
+.constraint-input {
+  display: flex;
+  align-items: center;
+  gap: 0.25rem;
+}
+
+.constraint-input input {
+  width: 80px;
+  padding: 0.5rem;
+  font-size: 0.9rem;
+}
+
+.constraint-input sub {
+  font-size: 0.8rem;
+}
+
+.solve-section {
+  text-align: center;
+}
+
+.solve-button {
+  background: var(--primary-color);
+  color: white;
+  border: none;
+  padding: 1rem 2rem;
+  border-radius: 8px;
+  font-size: 1.1rem;
+  font-weight: 600;
+  cursor: pointer;
+  transition: background-color 0.2s, transform 0.1s;
+}
+
+.solve-button:hover:not(:disabled) {
+  background: var(--primary-dark);
+  transform: translateY(-1px);
+}
+
+.solve-button:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+  transform: none;
+}
+
+.result-section .success {
+  background: #ecfdf5;
+  border: 2px solid var(--success-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  color: #065f46;
+}
+
+.result-section .error {
+  background: #fef2f2;
+  border: 2px solid var(--error-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  color: #991b1b;
+}
+
+.result-section ul {
+  list-style: none;
+  padding: 0;
+  margin-top: 1rem;
+}
+
+.result-section li {
+  padding: 0.5rem 0;
+  font-family: monospace;
+  font-size: 1.1rem;
+}
+
+.result-section li:not(:last-child) {
+  border-bottom: 1px solid rgba(16, 185, 129, 0.2);
+}
+
+@media (max-width: 768px) {
+  .container {
+    padding: 1rem;
+  }
+  
+  .config-inputs {
+    flex-direction: column;
+  }
+  
+  .objective-inputs {
+    flex-direction: column;
+  }
+  
+  .constraint-row {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+  
+  .constraint-input input {
+    width: 60px;
+  }
+}

@@ -1,0 +1,16 @@
+services:
+  backend:
+    build: ./backend
+    container_name: go_backend
+    ports:
+      - "8080:8080"
+    environment:
+      - GO_ENV=development
+
+  frontend:
+    build: ./frontend
+    container_name: preact_frontend
+    ports:
+      - "3000:80"
+    depends_on:
+      - backend
