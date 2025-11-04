@@ -6,6 +6,7 @@ export function App() {
 	const [numVariables, setNumVariables] = useState(2);
 	const [numConstraints, setNumConstraints] = useState(2);
 	const [objective, setObjective] = useState([1, 1]);
+	const [objectiveType, setObjectiveType] = useState('maximize');
 	const [constraints, setConstraints] = useState([[1, 1, 1], [1, 2, 2]]);
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
@@ -60,6 +61,7 @@ export function App() {
 			objective: {
 				n: numVariables,
 				coefficients: objective
+				,type: objectiveType
 			},
 			constraints: {
 				rows: numConstraints,
@@ -121,7 +123,15 @@ export function App() {
 			</div>
 
 			<div class="objective-section">
-				<h2>Función objetivo (maximizar)</h2>
+				<h2>Función objetivo ({objectiveType === 'maximize' ? 'maximizar' : 'minimizar'})</h2>
+				<div class="objective-type">
+					<label>
+						<input type="radio" name="objectiveType" value="maximize" checked={objectiveType === 'maximize'} onChange={(e) => setObjectiveType((e.target as HTMLInputElement).value)} /> Maximizar
+					</label>
+					<label>
+						<input type="radio" name="objectiveType" value="minimize" checked={objectiveType === 'minimize'} onChange={(e) => setObjectiveType((e.target as HTMLInputElement).value)} /> Minimizar
+					</label>
+				</div>
 				<div class="objective-inputs">
 					{objective.map((coeff, index) => (
 						<label key={index}>
