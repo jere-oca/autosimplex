@@ -33,7 +33,6 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 	// Count extra variables and build extended A matrix
 	// We'll add slack (for <=), surplus+artificial (for >=), and artificial (for =)
 	extraCols := 0
-	artCols := 0
 	for i := 0; i < m; i++ {
 		s := "<="
 		if i < len(signs) {
@@ -44,10 +43,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			extraCols += 1 // slack
 		case ">=":
 			extraCols += 2 // surplus + artificial
-			artCols += 1
 		case "=":
 			extraCols += 1 // artificial
-			artCols += 1
 		default:
 			extraCols += 1
 		}
