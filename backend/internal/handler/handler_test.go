@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"autosimplex/internal/simplex"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"gonum.org/v1/gonum/mat"
@@ -168,6 +169,55 @@ func TestProcess_MinimizeHandlerMatchesManualConversion(t *testing.T) {
 	expectedMin := -manualMax
 
 	// Response optimal_value is float64
+	val, ok := resp["optimal_value"].(float64)
+	assert.True(t, ok)
+	assert.Equal(t, expectedMin, val)
+}
+
+func TestProcess_MinimizeWithGreaterEqual(t *testing.T) {
+	// Test a minimization problem with >= constraints submitted to the handler.
+	gin.SetMode(gin.TestMode)
+	router := gin.New()
+	router.POST("/process", Process())
+
+	coefs := []float64{4, 5}
+	constraintsVars := []float64{
+		2, 1, 8,
+		1, 3, 12,
+	}
+	signs := []string{">=", ">="}
+
+	body, _ := json.Marshal(map[string]any{
+		"objective": map[string]any{
+			"n":            2,
+			"coefficients": coefs,
+			"type":         "minimize",
+		},
+		"constraints": map[string]any{
+			"rows":  2,
+			"cols":  3,
+			"vars":  constraintsVars,
+			"signs": signs,
+		},
+	})
+
+	req, _ := http.NewRequest(http.MethodPost, "/process", bytes.NewBuffer(body))
+	req.Header.Set("Content-Type", "application/json")
+	w := httptest.NewRecorder()
+	router.ServeHTTP(w, req)
+
+	assert.Equal(t, http.StatusOK, w.Code)
+	var resp map[string]any
+	err := json.Unmarshal(w.Body.Bytes(), &resp)
+	assert.NoError(t, err)
+
+	// Manual conversion: negate coefficients to maximize and use SolveWithSigns,
+	// then invert the result
+	maximizeVec := mat.NewVecDense(2, []float64{-4, -5})
+	constraintMatrix := mat.NewDense(2, 3, constraintsVars)
+	manualMax, _ := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
+	expectedMin := -manualMax
+
 	val, ok := resp["optimal_value"].(float64)
 	assert.True(t, ok)
 	assert.Equal(t, expectedMin, val)

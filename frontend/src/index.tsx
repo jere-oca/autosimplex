@@ -8,6 +8,7 @@ export function App() {
 	const [objective, setObjective] = useState([1, 1]);
 	const [objectiveType, setObjectiveType] = useState('maximize');
 	const [constraints, setConstraints] = useState([[1, 1, 1], [1, 2, 2]]);
+	const [constraintSigns, setConstraintSigns] = useState<string[]>(Array(2).fill("<="));
 	const [result, setResult] = useState(null);
 	const [loading, setLoading] = useState(false);
 
@@ -39,6 +40,13 @@ export function App() {
 			}
 		}
 		setConstraints(newConstraintsMatrix);
+
+		// Ajustar signos de restricciones cuando cambia el número de restricciones
+		const newSigns = Array(newConstraints).fill("<=");
+		for (let i = 0; i < Math.min(constraintSigns.length, newConstraints); i++) {
+			newSigns[i] = constraintSigns[i];
+		}
+		setConstraintSigns(newSigns);
 	};
 
 	const handleVariablesChange = (value: string) => {
@@ -66,7 +74,8 @@ export function App() {
 			constraints: {
 				rows: numConstraints,
 				cols: numVariables + 1,
-				vars: constraints.flat()
+				vars: constraints.flat(),
+				signs: constraintSigns
 			}
 		};
 
@@ -168,7 +177,15 @@ export function App() {
 										</>
 									) : (
 										<>
-											<span> ≤ </span>
+											<select value={constraintSigns[rowIndex]} onChange={(e) => {
+												const newSigns = [...constraintSigns];
+												newSigns[rowIndex] = (e.target as HTMLSelectElement).value;
+												setConstraintSigns(newSigns);
+											}}>
+												<option value="<=">≤</option>
+												<option value=">=">≥</option>
+												<option value="=">=</option>
+											</select>
 											<input
 												type="number"
 												step="0.01"
