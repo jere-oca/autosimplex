@@ -1,4 +1,4 @@
-package pdf
+package pdf_test
 
 import (
     "bytes"
@@ -9,6 +9,7 @@ import (
     "path/filepath"
     "testing"
 
+    pdf "autosimplex/internal/pdf"
     "autosimplex/internal/handler"
     "github.com/gin-gonic/gin"
     "github.com/stretchr/testify/assert"
@@ -20,11 +21,7 @@ func TestProcessPDFIntegration(t *testing.T) {
     router := gin.New()
     router.POST("/process", handler.Process())
 
-    // cargar archivo de ejemplo desde docs
-    repoRoot := ".." // estamos en backend/internal/pdf, subir dos niveles
-    reqPath := filepath.Join(repoRoot, "..", "docs", "request_example.json")
-    // corregir ruta relativa desde el paquete de tests
-    // intentar rutas comunes
+    // intentar rutas comunes para encontrar el JSON de ejemplo
     possible := []string{
         filepath.Join("..", "..", "docs", "request_example.json"),
         filepath.Join("..", "docs", "request_example.json"),
@@ -58,17 +55,15 @@ func TestProcessPDFIntegration(t *testing.T) {
     body := w.Body.Bytes()
     assert.True(t, len(body) > 0)
     // PDF típico comienza con %PDF
-    assert.True(t, bytes.HasPrefix(body, []byte{"%", "P", "D", "F"}))
+    assert.True(t, bytes.HasPrefix(body, []byte("%PDF")))
 
-    // adicional: intentar generar PDF directamente con GenerateSimplexPDF usando un reader
-    // leer un ejemplo más pequeño
-    // ...existing code...
+    // adicional: intentar generar PDF directamente con GenerateSimplexPDF usando un writer
     var buf bytes.Buffer
     // usar valores de ejemplo: valor óptimo 1.23, solución [1,2,3]
-    err = GenerateSimplexPDF(1.23, []float64{1, 2, 3}, &buf)
+    err = pdf.GenerateSimplexPDF(1.23, []float64{1, 2, 3}, &buf)
     assert.NoError(t, err)
     assert.True(t, buf.Len() > 0)
-    assert.True(t, bytes.HasPrefix(buf.Bytes(), []byte{"%", "P", "D", "F"}))
+    assert.True(t, bytes.HasPrefix(buf.Bytes(), []byte("%PDF")))
 }
 
 // helper para leer desde io.Reader a bytes
