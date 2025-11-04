@@ -4,6 +4,7 @@ import (
 	"autosimplex/internal/models"
 	"autosimplex/internal/pdf"
 	"autosimplex/internal/simplex"
+	"fmt"
 	"net/http"
 	"strings"
 
@@ -50,7 +51,52 @@ func Process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-		result, solution := simplex.Solve(maximizeVec, constraintMatrix)
+		// Note: do not auto-negate constraint rows here. The solver currently
+		// expects constraints in the form a_1 x_1 + ... + a_n x_n <= b with
+		// b >= 0. The frontend should provide constraints in that format. If
+		// support for >= is required, the solver must be extended (phase I/II).
+
+		// Debug: print what we are sending to the solver
+		fmt.Printf("isMinimize=%v, objectiveVec=%v\n", isMinimize, mat.Formatted(maximizeVec, mat.Prefix(" ")))
+		fmt.Printf("constraintMatrix:\n%v\n", mat.Formatted(constraintMatrix, mat.Prefix(" ")))
+
+		// Allow a debug-only response that returns the transformed inputs
+		// without executing the solver. Use query param ?debug=true.
+		if c.Query("debug") == "true" {
+			// Convert maximizeVec to a plain slice
+			coeffs := make([]float64, maximizeVec.Len())
+			for i := 0; i < maximizeVec.Len(); i++ {
+				coeffs[i] = maximizeVec.At(i, 0)
+			}
+			// Convert constraintMatrix to nested slices
+			rowsOut, colsOut := constraintMatrix.Dims()
+			matOut := make([][]float64, rowsOut)
+			for i := 0; i < rowsOut; i++ {
+				row := make([]float64, colsOut)
+				for j := 0; j < colsOut; j++ {
+					row[j] = constraintMatrix.At(i, j)
+				}
+				matOut[i] = row
+			}
+			c.JSON(http.StatusOK, gin.H{
+				"debug":       true,
+				"isMinimize":  isMinimize,
+				"objective":   coeffs,
+				"constraints": matOut,
+			})
+			return
+		}
+
+		// Build signs slice: use provided signs if any, otherwise default to "<=" for all rows
+		signs := req.Constraints.Signs
+		if len(signs) == 0 {
+			signs = make([]string, rows)
+			for i := 0; i < rows; i++ {
+				signs[i] = "<="
+			}
+		}
+
+		result, solution := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
 
 		// If it was a minimization request, invert the returned optimal value
 		// because we solved the equivalent maximization of -c.
@@ -58,20 +104,20 @@ func Process() func(c *gin.Context) {
 			result = -result
 		}
 
-			// Si se solicita formato PDF, generar y devolver PDF
-			format := c.Query("format")
-			if format == "pdf" {
-				c.Writer.Header().Set("Content-Type", "application/pdf")
-				c.Writer.Header().Set("Content-Disposition", "attachment; filename=resultado_simplex.pdf")
-				if err := pdf.GenerateSimplexPDF(result, solution, c.Writer); err != nil {
-					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
-				}
-				return
+		// Si se solicita formato PDF, generar y devolver PDF
+		format := c.Query("format")
+		if format == "pdf" {
+			c.Writer.Header().Set("Content-Type", "application/pdf")
+			c.Writer.Header().Set("Content-Disposition", "attachment; filename=resultado_simplex.pdf")
+			if err := pdf.GenerateSimplexPDF(result, solution, c.Writer); err != nil {
+				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
+			return
+		}
 
-			c.JSON(http.StatusOK, gin.H{
-				"optimal_value": result,
-				"solution":      solution,
-			})
+		c.JSON(http.StatusOK, gin.H{
+			"optimal_value": result,
+			"solution":      solution,
+		})
 	}
 }
