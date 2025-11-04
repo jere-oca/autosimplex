@@ -6,6 +6,8 @@ RUN go mod download
 
 COPY . .
 
+RUN go get github.com/johnfercher/maroto@latest && go mod tidy
+
 # Compilación estática y optimizada
 RUN CGO_ENABLED=0 go build -o main -ldflags="-s -w"
 
