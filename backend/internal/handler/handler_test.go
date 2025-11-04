@@ -8,6 +8,7 @@ import (
 	"testing"
 
 	"autosimplex/internal/simplex"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 	"gonum.org/v1/gonum/mat"
@@ -193,9 +194,9 @@ func TestProcess_MinimizeWithGreaterEqual(t *testing.T) {
 			"type":         "minimize",
 		},
 		"constraints": map[string]any{
-			"rows": 2,
-			"cols": 3,
-			"vars": constraintsVars,
+			"rows":  2,
+			"cols":  3,
+			"vars":  constraintsVars,
 			"signs": signs,
 		},
 	})
