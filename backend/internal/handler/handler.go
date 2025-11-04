@@ -5,6 +5,7 @@ import (
 	"autosimplex/internal/pdf"
 	"autosimplex/internal/simplex"
 	"net/http"
+	"strings"
 
 	"github.com/gin-gonic/gin"
 	"gonum.org/v1/gonum/mat"
@@ -22,10 +23,23 @@ func Process() func(c *gin.Context) {
 		// Función objetivo
 		n := req.Objective.N
 		coefs := req.Objective.Coefficients
-		if validateReqObjective(c, n, coefs) {
+		if validateReqObjective(c, n, coefs, req.Objective.Type) {
 			return
 		}
+		// Build objective vector. If the request asks to minimize, convert
+		// the problem into a maximization by negating the coefficients.
 		objective := mat.NewVecDense(n, coefs)
+		isMinimize := strings.ToLower(strings.TrimSpace(req.Objective.Type)) == "minimize"
+		var maximizeVec *mat.VecDense
+		if isMinimize {
+			neg := make([]float64, n)
+			for i := 0; i < n; i++ {
+				neg[i] = -coefs[i]
+			}
+			maximizeVec = mat.NewVecDense(n, neg)
+		} else {
+			maximizeVec = objective
+		}
 
 		// Matriz de restricciones (incluye lado derecho)
 		rows := req.Constraints.Rows
@@ -36,7 +50,13 @@ func Process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-			result, solution := simplex.Solve(objective, constraintMatrix)
+		result, solution := simplex.Solve(maximizeVec, constraintMatrix)
+
+		// If it was a minimization request, invert the returned optimal value
+		// because we solved the equivalent maximization of -c.
+		if isMinimize {
+			result = -result
+		}
 
 			// Si se solicita formato PDF, generar y devolver PDF
 			format := c.Query("format")

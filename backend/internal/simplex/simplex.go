@@ -36,7 +36,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 
 	// Vector b: lado derecho de las restricciones
 	bTemp := make([]float64, constraintCount)
-	for i := range constraintCount {
+	for i := 0; i < constraintCount; i++ {
 		bTemp[i] = constraints.At(i, variablesCount)
 	}
 	b := mat.NewVecDense(constraintCount, bTemp)
@@ -77,13 +77,19 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		y := mat.NewDense(1, constraintCount, cBData)
 		//fmt.Printf("cBT vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
 
-		Bi := mat.DenseCopyOf(B)
-		err := Bi.Inverse(B)
-		if err != nil {
-			panic("Error en matriz inversa!")
+		// Solve for y (column) in B^T * y = cB using LU (avoids explicit inverse)
+		cBVec := mat.NewVecDense(constraintCount, cBData)
+		var lu mat.LU
+		lu.Factorize(B)
+		yCol := mat.NewVecDense(constraintCount, nil)
+		if err := lu.SolveVecTo(yCol, true, cBVec); err != nil {
+			panic("Error al resolver sistema para multiplicadores y: " + err.Error())
 		}
-		//fmt.Printf("Bi matrix:\n %v\n\n", mat.Formatted(Bi, mat.Prefix(" "), mat.Excerpt(8)))
-		y.Mul(y, Bi)
+		// Convert to row vector y (1 x m) for subsequent multiplications
+		y = mat.NewDense(1, constraintCount, nil)
+		for i := 0; i < constraintCount; i++ {
+			y.Set(0, i, yCol.AtVec(i))
+		}
 		//fmt.Printf("y^T vector:\n %v\n\n", mat.Formatted(y, mat.Prefix(" "), mat.Excerpt(8)))
 
 		// Paso 2: calcular y^T A_N y comparar con c_{N}^T component-wise
@@ -115,9 +121,12 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		newBaseVar := variablesCount + constraintCount + 1
 		var largestVal float64
 		hasLargestVal := false
-		a := mat.NewDense(constraintCount, 1, nil)
 
 		// Paso 3: elegir variable entrante
+		// Debugging: print reduced costs vs y^T A_N for troubleshooting pivot selection
+		// (only helpful during tests; can be removed later)
+		// Build debug slices (removed prints)
+
 		for i := range currentNonBaseVars {
 			if cNT.At(0, i) > yTAN.At(0, i) {
 				// Mayor que el máximo valor actual y de índice menor que el del máximo actual
@@ -149,13 +158,19 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		}
 
 		// Paso 4: calcular dirección y paso permitido
-		a.SetCol(0, AT.RawRowView(newBaseVar-1))
+		// Construir vector columna 'a' correspondiente a la columna entrante
+		aVec := mat.NewVecDense(constraintCount, nil)
+		raw := AT.RawRowView(newBaseVar - 1)
+		for i := 0; i < constraintCount; i++ {
+			// AT.RawRowView gives the column of A as a row in AT
+			aVec.SetVec(i, raw[i])
+		}
 
-		//fmt.Printf("a vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
-
-		a.Mul(Bi, a)
-
-		//fmt.Printf("d vector:\n %v\n\n", mat.Formatted(a, mat.Prefix(" "), mat.Excerpt(8)))
+		// Resolver d = B^{-1} * aVec usando la LU ya factorizada (lu)
+		dVec := mat.NewVecDense(constraintCount, nil)
+		if err := lu.SolveVecTo(dVec, false, aVec); err != nil {
+			panic("Error al resolver dirección d: " + err.Error())
+		}
 
 		// Paso 5: máximo 't' posible tal que b - t * d <= 0 (determina qué variable sale de la base)
 		lowest := -1.0
@@ -163,10 +178,9 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 		lowestValueOfT := 0.0
 		for i := range currentBaseVars {
 			baseValue := b.At(i, 0)
-			dValue := a.At(i, 0)
+			dValue := dVec.AtVec(i)
 			if dValue > 0 {
 				tValue := baseValue / dValue
-				//fmt.Println(tValue)
 				if lowest < 0 || tValue < lowest {
 					lowest = tValue
 					lowestIndex = i
@@ -185,7 +199,7 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 				b.SetVec(i, lowest)
 				currentBaseVars[lowestIndex] = newBaseVar
 			} else {
-				b.SetVec(i, b.At(i, 0)-lowestValueOfT*a.At(i, 0))
+				b.SetVec(i, b.At(i, 0)-lowestValueOfT*dVec.AtVec(i))
 			}
 		}
 		//fmt.Printf("new b vector:\n %v\n\n", mat.Formatted(b, mat.Prefix(" "), mat.Excerpt(8)))
