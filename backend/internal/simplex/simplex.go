@@ -17,10 +17,9 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 	return SolveWithSigns(maximize, constraints, signs)
 }
 
-// SolveWithSigns solves the LP (maximize) given the objective vector and a
-// constraints matrix where each row is [a1 ... an b]. Signs must be a slice
-// with values "<=", ">=", or "=" for each constraint. This function uses a
-// Big-M approach to handle artificial variables (M large positive number).
+// SolveWithSigns solves a maximization LP given an objective vector and a
+// constraint matrix (rows are [a1 ... an b]). 'signs' contains one of
+// "<=", ">=", or "=" per constraint. Uses a Big-M strategy for artificials.
 func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64) {
 	const M = 1e7
 

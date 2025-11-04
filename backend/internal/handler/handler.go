@@ -51,11 +51,6 @@ func Process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-		// Note: do not auto-negate constraint rows here. The solver currently
-		// expects constraints in the form a_1 x_1 + ... + a_n x_n <= b with
-		// b >= 0. The frontend should provide constraints in that format. If
-		// support for >= is required, the solver must be extended (phase I/II).
-
 		// Debug: print what we are sending to the solver
 		fmt.Printf("isMinimize=%v, objectiveVec=%v\n", isMinimize, mat.Formatted(maximizeVec, mat.Prefix(" ")))
 		fmt.Printf("constraintMatrix:\n%v\n", mat.Formatted(constraintMatrix, mat.Prefix(" ")))
