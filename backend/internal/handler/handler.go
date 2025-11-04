@@ -2,6 +2,7 @@ package handler
 
 import (
 	"autosimplex/internal/models"
+	"autosimplex/internal/pdf"
 	"autosimplex/internal/simplex"
 	"net/http"
 	"strings"
@@ -57,9 +58,20 @@ func Process() func(c *gin.Context) {
 			result = -result
 		}
 
-		c.JSON(http.StatusOK, gin.H{
-			"optimal_value": result,
-			"solution":      solution,
-		})
+			// Si se solicita formato PDF, generar y devolver PDF
+			format := c.Query("format")
+			if format == "pdf" {
+				c.Writer.Header().Set("Content-Type", "application/pdf")
+				c.Writer.Header().Set("Content-Disposition", "attachment; filename=resultado_simplex.pdf")
+				if err := pdf.GenerateSimplexPDF(result, solution, c.Writer); err != nil {
+					c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
+				}
+				return
+			}
+
+			c.JSON(http.StatusOK, gin.H{
+				"optimal_value": result,
+				"solution":      solution,
+			})
 	}
 }
