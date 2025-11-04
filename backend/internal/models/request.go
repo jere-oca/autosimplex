@@ -3,6 +3,9 @@ package models
 type Objective struct {
 	N            int       `json:"n"`
 	Coefficients []float64 `json:"coefficients"`
+	// Type indicates whether to "maximize" or "minimize" the objective.
+	// Optional: defaults to "maximize" when omitted.
+	Type string `json:"type,omitempty"`
 }
 
 type Constraints struct {
