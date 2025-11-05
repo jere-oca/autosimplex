@@ -165,7 +165,7 @@ func TestProcess_MinimizeHandlerMatchesManualConversion(t *testing.T) {
 	// Manual conversion: Solve with maximize vector = -coefs, then invert sign
 	maximizeVec := mat.NewVecDense(3, []float64{-5, -4, -3})
 	constraintMatrix := mat.NewDense(3, 4, constraintsVars)
-	manualMax, _ := simplex.Solve(maximizeVec, constraintMatrix)
+	manualMax, _, _ := simplex.Solve(maximizeVec, constraintMatrix)
 	expectedMin := -manualMax
 
 	// Response optimal_value is float64
@@ -215,7 +215,7 @@ func TestProcess_MinimizeWithGreaterEqual(t *testing.T) {
 	// then invert the result
 	maximizeVec := mat.NewVecDense(2, []float64{-4, -5})
 	constraintMatrix := mat.NewDense(2, 3, constraintsVars)
-	manualMax, _ := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
+	manualMax, _, _ := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
 	expectedMin := -manualMax
 
 	val, ok := resp["optimal_value"].(float64)

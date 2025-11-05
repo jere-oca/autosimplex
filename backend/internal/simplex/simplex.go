@@ -8,7 +8,7 @@ import (
 )
 
 // Solve is a convenience wrapper that assumes all constraints are "<=".
-func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
+func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []SimplexStep) {
 	rows, _ := constraints.Dims()
 	signs := make([]string, rows)
 	for i := range signs {
@@ -20,14 +20,15 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64) {
 // SolveWithSigns solves a maximization LP given an objective vector and a
 // constraint matrix (rows are [a1 ... an b]). 'signs' contains one of
 // "<=", ">=", or "=" per constraint. Uses a Big-M strategy for artificials.
-func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64) {
+func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64, []SimplexStep) {
 	const M = 1e7
+	var steps []SimplexStep
 
 	m, cols := constraints.Dims()
 	n := maximize.Len()
 	if cols != n+1 {
 		// malformed matrix; return failure
-		return 0, nil
+		return 0, nil, steps
 	}
 
 	// Count extra variables and build extended A matrix
@@ -140,7 +141,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		cBVec := mat.NewVecDense(m, cB)
 		if err := lu.SolveVecTo(yCol, true, cBVec); err != nil {
 			// singular base -> infeasible
-			return 0, nil
+			return 0, nil, steps
 		}
 		// y as row
 		y := mat.NewDense(1, m, nil)
@@ -193,7 +194,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 					optimal += c.At(0, bv) * val
 				}
 			}
-			return optimal, solution
+			return optimal, solution, steps
 		}
 
 		enteringVar := nonBase[entering]
@@ -208,7 +209,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		// Solve d = B^{-1} * aVec using LU
 		dVec := mat.NewVecDense(m, nil)
 		if err := lu.SolveVecTo(dVec, false, aVec); err != nil {
-			return 0, nil
+			return 0, nil, steps
 		}
 
 		// Ratio test b_i / d_i for d_i > 0
@@ -226,8 +227,29 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		}
 		if leavingIndex == -1 {
 			// unbounded
-			return 0, nil
+			return 0, nil, steps
 		}
+
+		// Prepare step
+		currentBaseVars := append([]int{}, baseVars...)
+		currentNonBaseVars := append([]int{}, nonBase...)
+		reducedCosts := matDenseToSlice(yAN)
+		bVector := matVecToSlice(b)
+		newBaseVar := enteringVar
+		leavingVar := baseVars[leavingIndex]
+		lowestValueOfT := minRatio
+
+		step := SimplexStep{
+			Iteration:        iter,
+			BaseVariables:    currentBaseVars,
+			NonBaseVariables: currentNonBaseVars,
+			ReducedCosts:     reducedCosts,
+			BVector:          bVector,
+			EnteringVar:      newBaseVar,
+			LeavingVar:       leavingVar,
+			TValue:           lowestValueOfT,
+		}
+		steps = append(steps, step)
 
 		// Update base: replace baseVars[leavingIndex] with enteringVar
 		// Update b vector
@@ -245,9 +267,29 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		iter++
 	}
 
-	return 0, nil
+	return 0, nil, steps
 }
 
 func contains(s []int, e int) bool {
 	return slices.Contains(s, e)
+}
+
+func matDenseToSlice(m *mat.Dense) []float64 {
+	r, c := m.Dims()
+	out := make([]float64, r*c)
+	for i := range r {
+		for j := range c {
+			out[i*c+j] = m.At(i, j)
+		}
+	}
+	return out
+}
+
+func matVecToSlice(v *mat.VecDense) []float64 {
+	n := v.Len()
+	out := make([]float64, n)
+	for i := range n {
+		out[i] = v.AtVec(i)
+	}
+	return out
 }
