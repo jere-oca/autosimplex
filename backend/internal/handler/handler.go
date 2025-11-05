@@ -33,7 +33,7 @@ func Process() func(c *gin.Context) {
 		var maximizeVec *mat.VecDense
 		if isMinimize {
 			neg := make([]float64, n)
-			for i := 0; i < n; i++ {
+			for i := range n {
 				neg[i] = -coefs[i]
 			}
 			maximizeVec = mat.NewVecDense(n, neg)
@@ -54,7 +54,7 @@ func Process() func(c *gin.Context) {
 		signs := req.Constraints.Signs
 		if len(signs) == 0 {
 			signs = make([]string, rows)
-			for i := 0; i < rows; i++ {
+			for i := range rows {
 				signs[i] = "<="
 			}
 		}
