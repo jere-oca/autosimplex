@@ -1,183 +1,270 @@
 package simplex
 
 import (
-	"fmt"
+	"math"
 	"slices"
 
 	"gonum.org/v1/gonum/mat"
 )
 
+// Solve is a convenience wrapper that assumes all constraints are "<=".
 func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []SimplexStep) {
+	rows, _ := constraints.Dims()
+	signs := make([]string, rows)
+	for i := range signs {
+		signs[i] = "<="
+	}
+	return SolveWithSigns(maximize, constraints, signs)
+}
 
+// SolveWithSigns solves a maximization LP given an objective vector and a
+// constraint matrix (rows are [a1 ... an b]). 'signs' contains one of
+// "<=", ">=", or "=" per constraint. Uses a Big-M strategy for artificials.
+func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64, []SimplexStep) {
+	const M = 1e7
 	var steps []SimplexStep
 
-	// Dimensiones de la matriz de restricciones sin los valores del lado derecho
-	constraintCount, variablesCount := constraints.Dims()
-	variablesCount--
-
-	totalVariables := constraintCount + variablesCount
-
-	// Matriz A: coeficientes de las restricciones
-	A := mat.DenseCopyOf(constraints.Grow(0, constraintCount-1))
-
-	// Se asignan las variables de holgura
-	tempVector := make([]float64, constraintCount)
-	tempVector[0] = 1
-	A.SetCol(variablesCount, tempVector)
-
-	// Resto de la matriz identidad
-	for i := 1; i < constraintCount; i++ {
-		A.Set(i, i+variablesCount, 1)
+	m, cols := constraints.Dims()
+	n := maximize.Len()
+	if cols != n+1 {
+		// malformed matrix; return failure
+		return 0, nil, steps
 	}
 
-	// Vector c: coeficientes de la función objetivo y variables de holgura cero
-	c := mat.NewDense(1, totalVariables, make([]float64, totalVariables))
-	for i := 0; i < maximize.Len(); i++ {
-		c.Set(0, i, maximize.At(i, 0))
+	// Count extra variables and build extended A matrix
+	// We'll add slack (for <=), surplus+artificial (for >=), and artificial (for =)
+	extraCols := 0
+	for i := range m {
+		s := "<="
+		if i < len(signs) {
+			s = signs[i]
+		}
+		switch s {
+		case "<=":
+			extraCols += 1 // slack
+		case ">=":
+			extraCols += 2 // surplus + artificial
+		case "=":
+			extraCols += 1 // artificial
+		default:
+			extraCols += 1
+		}
 	}
 
-	// Vector b: lado derecho de las restricciones
-	bTemp := make([]float64, constraintCount)
-	for i := range constraintCount {
-		bTemp[i] = constraints.At(i, variablesCount)
-	}
-	b := mat.NewVecDense(constraintCount, bTemp)
+	totalVars := n + extraCols
 
-	// Variables básicas iniciales
-	currentBaseVars := make([]int, constraintCount)
-	for i := range currentBaseVars {
-		currentBaseVars[i] = variablesCount + i + 1
+	// Build A_extended
+	A := mat.NewDense(m, totalVars, nil)
+	// Fill original variables
+	for i := range m {
+		for j := range n {
+			A.Set(i, j, constraints.At(i, j))
+		}
 	}
 
-	// Iteraciones
-	const maxSimplexIterations = 10
-	iterations := 0
+	// Track indices and base variable per row
+	col := n
+	baseVars := make([]int, m) // 1-based indices of basic vars per row
+	artIndices := []int{}
+	for i := range m {
+		s := "<="
+		if i < len(signs) {
+			s = signs[i]
+		}
+		switch s {
+		case "<=":
+			A.Set(i, col, 1)
+			baseVars[i] = col + 1
+			col++
+		case ">=":
+			// surplus
+			A.Set(i, col, -1)
+			col++
+			// artificial
+			A.Set(i, col, 1)
+			baseVars[i] = col + 1
+			artIndices = append(artIndices, col)
+			col++
+		case "=":
+			// artificial
+			A.Set(i, col, 1)
+			baseVars[i] = col + 1
+			artIndices = append(artIndices, col)
+			col++
+		default:
+			A.Set(i, col, 1)
+			baseVars[i] = col + 1
+			col++
+		}
+	}
+
+	// Build objective c (1 x totalVars). Artificial variables get -M penalty
+	c := mat.NewDense(1, totalVars, make([]float64, totalVars))
+	for j := range n {
+		c.Set(0, j, maximize.At(j, 0))
+	}
+	for _, ai := range artIndices {
+		c.Set(0, ai, -M)
+	}
+
+	// Build b vector
+	bData := make([]float64, m)
+	for i := range m {
+		bData[i] = constraints.At(i, n)
+	}
+	b := mat.NewVecDense(m, bData)
+
+	// Now proceed with simplex iterations similar to prior implementation,
+	// but using our constructed A, c, b and the provided baseVars.
+	ATrans := mat.DenseCopyOf(A.T())
+
+	const maxIter = 200
+	iter := 0
 	for {
-		if iterations > maxSimplexIterations {
+		if iter > maxIter {
 			break
 		}
 
-		// Paso 1: resolver el sistema dual (y^T)(B) = (c_B)^T
-		// Se construye la matriz B de columnas básicas y se obtienen los multiplicadores simplex 'y'
-		B := mat.NewDense(constraintCount, constraintCount, nil)
-		AT := mat.DenseCopyOf(A.T()) // Transpuesta
-		cBData := make([]float64, constraintCount)
-		for i := range currentBaseVars {
-			B.SetCol(i, AT.RawRowView(currentBaseVars[i]-1))
-			cBData[i] = c.At(0, currentBaseVars[i]-1)
+		// Build B from baseVars
+		B := mat.NewDense(m, m, nil)
+		cB := make([]float64, m)
+		for i := range m {
+			// baseVars stores 1-based index
+			B.SetCol(i, ATrans.RawRowView(baseVars[i]-1))
+			cB[i] = c.At(0, baseVars[i]-1)
 		}
-		y := mat.NewDense(1, constraintCount, cBData)
 
-		Bi := mat.DenseCopyOf(B)
-		err := Bi.Inverse(B)
-		if err != nil {
-			panic("Error en matriz inversa!")
+		// Solve B^T * y = cB  (y is column)
+		var lu mat.LU
+		lu.Factorize(B)
+		yCol := mat.NewVecDense(m, nil)
+		cBVec := mat.NewVecDense(m, cB)
+		if err := lu.SolveVecTo(yCol, true, cBVec); err != nil {
+			// singular base -> infeasible
+			return 0, nil, steps
 		}
-		y.Mul(y, Bi)
+		// y as row
+		y := mat.NewDense(1, m, nil)
+		for i := range m {
+			y.Set(0, i, yCol.AtVec(i))
+		}
 
-		// Paso 2: calcular costos reducidos
-		// Matriz de variables no básicas
-		AN := mat.NewDense(constraintCount, variablesCount, nil)
-		cNT := mat.NewDense(1, variablesCount, nil)
-		var currentNonBaseVars []int
-		for i := 1; i < totalVariables+1; i++ {
-			if !contains(currentBaseVars, i) {
-				currentNonBaseVars = append(currentNonBaseVars, i)
+		// Build AN and cN for non-basic vars
+		var nonBase []int
+		for j := 1; j <= totalVars; j++ {
+			if !contains(baseVars, j) {
+				nonBase = append(nonBase, j)
 			}
 		}
-
-		for i := range currentNonBaseVars {
-			AN.SetCol(i, AT.RawRowView(currentNonBaseVars[i]-1))
-			cNT.SetCol(i, []float64{c.At(0, currentNonBaseVars[i]-1)})
+		AN := mat.NewDense(m, len(nonBase), nil)
+		cN := mat.NewDense(1, len(nonBase), nil)
+		for i := range nonBase {
+			AN.SetCol(i, ATrans.RawRowView(nonBase[i]-1))
+			cN.SetCol(i, []float64{c.At(0, nonBase[i]-1)})
 		}
 
-		// Costos reducidos (si todos <= 0, la solución es óptima)
-		yTAN := mat.NewDense(1, variablesCount, nil)
-		yTAN.Mul(y, AN)
+		// Reduced costs: cN - y * AN
+		yAN := mat.NewDense(1, len(nonBase), nil)
+		yAN.Mul(y, AN)
 
-		newBaseVar := variablesCount + constraintCount + 1
-		var largestVal float64
-		hasLargestVal := false
-		a := mat.NewDense(constraintCount, 1, nil)
-
-		// Paso 3: elegir variable entrante
-		for i := range currentNonBaseVars {
-			if cNT.At(0, i) > yTAN.At(0, i) {
-				// Mayor que el máximo valor actual y de índice menor que el del máximo actual
-				if !hasLargestVal || cNT.At(0, i) >= largestVal {
-					if currentNonBaseVars[i] < newBaseVar {
-						newBaseVar = currentNonBaseVars[i]
-						largestVal = cNT.At(0, i)
-						hasLargestVal = true
-					}
+		// Choose entering variable: any index where cN > yAN
+		entering := -1
+		enteringVal := 0.0
+		for i := range nonBase {
+			if cN.At(0, i) > yAN.At(0, i)+1e-9 {
+				val := cN.At(0, i) - yAN.At(0, i)
+				if entering == -1 || val > enteringVal || nonBase[i] < nonBase[entering] {
+					entering = i
+					enteringVal = val
 				}
 			}
 		}
 
-		// Si no hay mejora posible, se devuelve la función objetivo óptima
-		if !hasLargestVal {
-			var result float64
-			solution := make([]float64, maximize.Len())
-			for i := range currentBaseVars {
-				baseVarIndex := currentBaseVars[i] - 1
-				if baseVarIndex < variablesCount { // evitar variables de holgura
+		if entering == -1 {
+			// optimal
+			// Build solution for original variables
+			solution := make([]float64, n)
+			var optimal float64
+			for i := range m {
+				bv := baseVars[i] - 1
+				if bv < n {
+					// original variable
 					val := b.At(i, 0)
-					result += maximize.At(baseVarIndex, 0) * val
-					solution[baseVarIndex] = val
+					solution[bv] = val
+					optimal += c.At(0, bv) * val
 				}
 			}
-			return result, solution, steps
+			return optimal, solution, steps
 		}
 
-		// Paso 4: calcular dirección y paso permitido
-		a.SetCol(0, AT.RawRowView(newBaseVar-1))
-		a.Mul(Bi, a)
+		enteringVar := nonBase[entering]
 
-		// Paso 5: máximo 't' posible tal que b - t * d <= 0 (determina qué variable sale de la base)
-		lowest := -1.0
-		lowestIndex := -1
-		lowestValueOfT := 0.0
-		for i := range currentBaseVars {
-			baseValue := b.At(i, 0)
-			dValue := a.At(i, 0)
-			if dValue > 0 {
-				tValue := baseValue / dValue
-				//fmt.Println(tValue)
-				if lowest < 0 || tValue < lowest {
-					lowest = tValue
-					lowestIndex = i
-					lowestValueOfT = tValue
+		// Get column a for enteringVar
+		raw := ATrans.RawRowView(enteringVar - 1)
+		aVec := mat.NewVecDense(m, nil)
+		for i := range m {
+			aVec.SetVec(i, raw[i])
+		}
+
+		// Solve d = B^{-1} * aVec using LU
+		dVec := mat.NewVecDense(m, nil)
+		if err := lu.SolveVecTo(dVec, false, aVec); err != nil {
+			return 0, nil, steps
+		}
+
+		// Ratio test b_i / d_i for d_i > 0
+		minRatio := math.Inf(1)
+		leavingIndex := -1
+		for i := range m {
+			dv := dVec.AtVec(i)
+			if dv > 1e-12 {
+				ratio := b.At(i, 0) / dv
+				if ratio < minRatio {
+					minRatio = ratio
+					leavingIndex = i
 				}
 			}
 		}
-		// Guardar el paso intermedio
+		if leavingIndex == -1 {
+			// unbounded
+			return 0, nil, steps
+		}
+
+		// Prepare step
+		currentBaseVars := append([]int{}, baseVars...)
+		currentNonBaseVars := append([]int{}, nonBase...)
+		reducedCosts := matDenseToSlice(yAN)
+		bVector := matVecToSlice(b)
+		newBaseVar := enteringVar
+		leavingVar := baseVars[leavingIndex]
+		lowestValueOfT := minRatio
+
 		step := SimplexStep{
-			Iteration:        iterations,
-			BaseVariables:    append([]int{}, currentBaseVars...),
-			NonBaseVariables: append([]int{}, currentNonBaseVars...),
-			ReducedCosts:     matDenseToSlice(yTAN),
-			BVector:          matVecToSlice(b),
+			Iteration:        iter,
+			BaseVariables:    currentBaseVars,
+			NonBaseVariables: currentNonBaseVars,
+			ReducedCosts:     reducedCosts,
+			BVector:          bVector,
 			EnteringVar:      newBaseVar,
-			LeavingVar:       currentBaseVars[lowestIndex],
+			LeavingVar:       leavingVar,
 			TValue:           lowestValueOfT,
 		}
 		steps = append(steps, step)
 
-		if lowest <= 0 {
-			fmt.Println("couldn't find appropriate t value")
-			return 0, nil, steps
-		}
-
-		// Paso 6: actualizar la base y el vector 'b'
-		for i := range currentBaseVars {
-			if i == lowestIndex {
-				b.SetVec(i, lowest)
-				currentBaseVars[lowestIndex] = newBaseVar
+		// Update base: replace baseVars[leavingIndex] with enteringVar
+		// Update b vector
+		// Compute theta = minRatio
+		theta := minRatio
+		for i := range m {
+			if i == leavingIndex {
+				b.SetVec(i, theta)
+				baseVars[i] = enteringVar
 			} else {
-				b.SetVec(i, b.At(i, 0)-lowestValueOfT*a.At(i, 0))
+				b.SetVec(i, b.At(i, 0)-theta*dVec.AtVec(i))
 			}
 		}
-		iterations++
+
+		iter++
 	}
 
 	return 0, nil, steps
