@@ -59,7 +59,7 @@ func Process() func(c *gin.Context) {
 			}
 		}
 
-		result, solution, steps := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
+		result, solution, steps, warning := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
 
 		// If it was a minimization request, invert the returned optimal value
 		// because we solved the equivalent maximization of -c.
@@ -82,6 +82,7 @@ func Process() func(c *gin.Context) {
 			"optimal_value": result,
 			"solution":      solution,
 			"steps":         steps,
+			"warning":       warning,
 		})
 	}
 }

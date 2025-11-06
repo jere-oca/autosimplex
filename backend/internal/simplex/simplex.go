@@ -8,7 +8,7 @@ import (
 )
 
 // Solve is a convenience wrapper that assumes all constraints are "<=".
-func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []SimplexStep) {
+func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []SimplexStep, string) {
 	rows, _ := constraints.Dims()
 	signs := make([]string, rows)
 	for i := range signs {
@@ -20,15 +20,15 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []S
 // SolveWithSigns solves a maximization LP given an objective vector and a
 // constraint matrix (rows are [a1 ... an b]). 'signs' contains one of
 // "<=", ">=", or "=" per constraint. Uses a Big-M strategy for artificials.
-func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64, []SimplexStep) {
+func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64, []SimplexStep, string) {
 	const M = 1e7
 	var steps []SimplexStep
 
 	m, cols := constraints.Dims()
 	n := maximize.Len()
 	if cols != n+1 {
-		// malformed matrix; return failure
-		return 0, nil, steps
+		warning := "Cantidad de columnas no coinciden con variables"
+		return 0, nil, steps, warning
 	}
 
 	// Count extra variables and build extended A matrix
@@ -141,7 +141,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		cBVec := mat.NewVecDense(m, cB)
 		if err := lu.SolveVecTo(yCol, true, cBVec); err != nil {
 			// singular base -> infeasible
-			return 0, nil, steps
+			warning := "Matriz singular, problema infactible o mal planteado"
+			return 0, nil, steps, warning
 		}
 		// y as row
 		y := mat.NewDense(1, m, nil)
@@ -194,7 +195,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 					optimal += c.At(0, bv) * val
 				}
 			}
-			return optimal, solution, steps
+			warning := "" // Solución óptima
+			return optimal, solution, steps, warning
 		}
 
 		enteringVar := nonBase[entering]
@@ -209,7 +211,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		// Solve d = B^{-1} * aVec using LU
 		dVec := mat.NewVecDense(m, nil)
 		if err := lu.SolveVecTo(dVec, false, aVec); err != nil {
-			return 0, nil, steps
+			warning := "Solución no única, problema infactible o degenerado"
+			return 0, nil, steps, warning
 		}
 
 		// Ratio test b_i / d_i for d_i > 0
@@ -226,8 +229,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			}
 		}
 		if leavingIndex == -1 {
-			// unbounded
-			return 0, nil, steps
+			warning := "Problema no acotado"
+			return 0, nil, steps, warning
 		}
 
 		// Prepare step
@@ -266,8 +269,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 
 		iter++
 	}
-
-	return 0, nil, steps
+	warning := ""
+	return 0, nil, steps, warning
 }
 
 func contains(s []int, e int) bool {
