@@ -184,6 +184,31 @@ input[type="number"]:focus {
   border-bottom: 1px solid rgba(16, 185, 129, 0.2);
 }
 
+.download-pdf-button {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.2s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.download-pdf-button:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.download-pdf-button:active {
+  transform: translateY(0);
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 1rem;
