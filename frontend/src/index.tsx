@@ -114,7 +114,8 @@ export function App() {
 							type="number" 
 							value={numVariables} 
 							min="1" 
-							max="10"
+							max="100"
+							step="1"
 							onChange={(e) => handleVariablesChange((e.target as HTMLInputElement).value)}
 						/>
 					</label>
@@ -124,7 +125,8 @@ export function App() {
 							type="number" 
 							value={numConstraints} 
 							min="1" 
-							max="10"
+							max="100"
+							step="1"
 							onChange={(e) => handleConstraintsChange((e.target as HTMLInputElement).value)}
 						/>
 					</label>
