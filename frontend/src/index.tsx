@@ -261,21 +261,32 @@ export function App() {
 					{result.error ? (
 						<div class="error">{result.error}</div>
 					) : (
-						<div class="success">
-							<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
-							<p><strong>Solución:</strong></p>
-							<ul>
-								{result.solution?.map((value, index) => (
-									<li key={index}>x<sub>{index + 1}</sub> = {value.toFixed(4)}</li>
-								))}
-							</ul>
-							<button 
-								class="download-pdf-button" 
-								onClick={downloadPDF}
-							>
-								📄 Descargar resultado en PDF
-							</button>
-						</div>
+						<>
+							{result.warning && result.warning.trim() !== '' && (
+								<div class="warning-box">
+									<div class="warning-icon">⚠️</div>
+									<div class="warning-content">
+										<h3>Advertencia</h3>
+										<p>{result.warning}</p>
+									</div>
+								</div>
+							)}
+							<div class="success">
+								<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
+								<p><strong>Solución:</strong></p>
+								<ul>
+									{result.solution?.map((value, index) => (
+										<li key={index}>x<sub>{index + 1}</sub> = {value.toFixed(4)}</li>
+									))}
+								</ul>
+								<button 
+									class="download-pdf-button" 
+									onClick={downloadPDF}
+								>
+									📄 Descargar resultado en PDF
+								</button>
+							</div>
+						</>
 					)}
 				</div>
 			)}
