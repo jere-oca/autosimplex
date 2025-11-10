@@ -10,6 +10,7 @@
 		"preact": "^10.26.9"
 	},
 	"devDependencies": {
+		"@playwright/test": "^1.56.1",
 		"@preact/preset-vite": "^2.10.2",
 		"typescript": "^5.9.2",
 		"vite": "^7.0.4"

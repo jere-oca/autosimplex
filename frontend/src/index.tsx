@@ -24,7 +24,7 @@ export function App() {
 		setConstraints(newConstraints);
 	};
 
-	const adjustDimensions = (newVars, newConstraints) => {
+	const adjustDimensions = (newVars: number, newConstraints: number) => {
 		// Actualizar función objetivo
 		const newObjective = Array(newVars).fill(0);
 		for (let i = 0; i < Math.min(objective.length, newVars); i++) {
@@ -265,7 +265,7 @@ export function App() {
 							<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
 							<p><strong>Solución:</strong></p>
 							<ul>
-								{result.solution?.map((value, index) => (
+								{result.solution?.map((value: number, index: unknown) => (
 									<li key={index}>x<sub>{index + 1}</sub> = {value.toFixed(4)}</li>
 								))}
 							</ul>
