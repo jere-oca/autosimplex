@@ -79,26 +79,3 @@ La API se ejecutará en http://localhost:8080/.
    ```
 
 Se ejecutará en http://localhost:5173/.
-
-# Testing
-
-Ejecutar `curl` de prueba:
-
-```bash
-curl -X POST http://localhost:8080/process \
--H "Content-Type: application/json" \
--d '{
-    "objective": {
-    "n": 4,
-    "coefficients": [3.2, 0.75, 5, 7.8]
-    },
-    "constraints": {
-    "rows": 4,
-    "cols": 5,
-    "vars": [1, 1.5, 2, 3, 4,
-        0, 1, 2.5, 6.3, 8,
-        0, 1, 1, 0.8, 7,
-        1, 5, 2.1, 3, 13]
-    }
-}'
-```

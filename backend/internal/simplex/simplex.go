@@ -182,7 +182,36 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		}
 
 		if entering == -1 {
-			// optimal
+			// Verificar si hay variables artificiales en la base (problema infactible)
+			for i := range m {
+				bv := baseVars[i] - 1
+				// Si la variable básica es artificial y tiene valor positivo
+				if contains(artIndices, bv) && b.At(i, 0) > 1e-9 {
+					warning := "Problema infactible: no existe solución"
+					// Devolver solución parcial alcanzada hasta el momento
+					solution := make([]float64, n)
+					for j := range m {
+						bvj := baseVars[j] - 1
+						if bvj < n {
+							val := b.At(j, 0)
+							solution[bvj] = val
+						}
+					}
+					return 0, solution, steps, warning
+				}
+			}
+
+			// Verificar si hay infinitas soluciones (costo reducido = 0 para variables no básicas)
+			hasInfiniteSolutions := false
+			for i := range nonBase {
+				// Si el costo reducido es cero para una variable no básica
+				if math.Abs(cN.At(0, i)-yAN.At(0, i)) < 1e-9 {
+					hasInfiniteSolutions = true
+					break
+				}
+			}
+
+			// Si llegamos aquí, la solución es óptima
 			// Build solution for original variables
 			solution := make([]float64, n)
 			var optimal float64
@@ -195,7 +224,11 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 					optimal += c.At(0, bv) * val
 				}
 			}
-			warning := "" // Solución óptima
+
+			warning := ""
+			if hasInfiniteSolutions {
+				warning = "Solución óptima no única: existen infinitas soluciones"
+			}
 			return optimal, solution, steps, warning
 		}
 
