@@ -17,7 +17,7 @@ func TestSimplexEqualityConstraint(t *testing.T) {
 
 	signs := []string{"="}
 
-	result, sol, _ := SolveWithSigns(maximize, constraints, signs)
+	result, sol, _, _ := SolveWithSigns(maximize, constraints, signs)
 
 	expected := 12.0
 	if result != expected {
@@ -47,7 +47,7 @@ func TestSimplexGreaterEqualConstraint(t *testing.T) {
 
 	signs := []string{">=", "<=", "<="}
 
-	result, sol, _ := SolveWithSigns(maximize, constraints, signs)
+	result, sol, _, _ := SolveWithSigns(maximize, constraints, signs)
 
 	expected := 7.0
 	if result != expected {
