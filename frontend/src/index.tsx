@@ -272,19 +272,23 @@ export function App() {
 								</div>
 							)}
 							<div class="success">
-								<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
-								<p><strong>Solución:</strong></p>
+								{!result.warning?.includes('infactible') && (
+									<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
+								)}
+								<p><strong>{result.warning?.includes('infactible') ? 'Solución parcial alcanzada:' : 'Solución:'}</strong></p>
 								<ul>
 									{result.solution?.map((value, index) => (
 										<li key={index}>x<sub>{index + 1}</sub> = {value.toFixed(4)}</li>
 									))}
 								</ul>
-								<button 
-									class="download-pdf-button" 
-									onClick={downloadPDF}
-								>
-									📄 Descargar resultado en PDF
-								</button>
+								{!result.warning?.includes('infactible') && (
+									<button 
+										class="download-pdf-button" 
+										onClick={downloadPDF}
+									>
+										📄 Descargar resultado en PDF
+									</button>
+								)}
 							</div>
 						</>
 					)}
