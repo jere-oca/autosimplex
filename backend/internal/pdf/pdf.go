@@ -4,13 +4,18 @@ import (
 	"fmt"
 	"io"
 
+	"autosimplex/internal/simplex"
+
+	"github.com/johnfercher/maroto/pkg/color"
 	m "github.com/johnfercher/maroto/pkg/consts"
 	"github.com/johnfercher/maroto/pkg/pdf"
 	"github.com/johnfercher/maroto/pkg/props"
 )
 
 // GenerateSimplexPDF escribe en w un PDF sencillo con el valor óptimo y la solución
-func GenerateSimplexPDF(optimalValue float64, solution []float64, w io.Writer) error {
+// GenerateSimplexPDF escribe en w un PDF sencillo con el valor óptimo, la solución
+// y las tablas intermedias (steps)
+func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simplex.SimplexStep, w io.Writer) error {
 	mPdf := pdf.NewMaroto(m.Portrait, m.A4)
 
 	mPdf.Row(20, func() {
@@ -35,6 +40,163 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, w io.Writer) e
 		})
 	}
 
+	// Tablas intermedias (steps)
+	if len(steps) > 0 {
+		mPdf.Row(12, func() {
+			mPdf.Col(12, func() {
+				mPdf.Text("Tablas intermedias:", props.Text{Top: 2, Align: "left", Size: 14})
+			})
+		})
+
+		for _, st := range steps {
+			// Iteration header
+			mPdf.Row(10, func() {
+				mPdf.Col(12, func() {
+					mPdf.Text(fmt.Sprintf("Iteración %d", st.Iteration), props.Text{Top: 2, Align: "left", Size: 12})
+				})
+			})
+
+			// Render a compact tableau-like representation as monospaced formatted lines
+			// Header: cj
+			if len(st.Cj) > 0 {
+				line := "cj:"
+				for _, v := range st.Cj {
+					line += fmt.Sprintf(" %8.2f", v)
+				}
+				mPdf.Row(8, func() {
+					mPdf.Col(12, func() {
+						mPdf.Text(line, props.Text{Top: 2, Align: "left", Size: 9})
+					})
+				})
+			}
+
+			// Table header
+			// Try rendering a table using Maroto TableList for nicer visual style
+			headers := []string{"c_b", "Base"}
+			if len(st.Table) > 0 {
+				for j := 0; j < len(st.Table[0])-1; j++ {
+					headers = append(headers, fmt.Sprintf("v%d", j+1))
+				}
+			}
+			headers = append(headers, "R")
+
+			contents := [][]string{}
+			for rIdx, row := range st.Table {
+				cols := []string{"", ""}
+				if rIdx < len(st.Cb) {
+					cols[0] = fmt.Sprintf("%.2f", st.Cb[rIdx])
+				}
+				if rIdx < len(st.BaseVariables) {
+					bv := st.BaseVariables[rIdx]
+					if bv <= len(solution) {
+						cols[1] = fmt.Sprintf("X%d", bv)
+					} else {
+						cols[1] = fmt.Sprintf("S%d", bv-len(solution))
+					}
+				}
+				for c := 0; c < len(row)-1; c++ {
+					val := row[c]
+					cell := fmt.Sprintf("%.2f", val)
+					if rIdx == st.PivotRow && c == st.PivotCol {
+						cell = "▶" + cell + "◀"
+					}
+					cols = append(cols, cell)
+				}
+				// RHS
+				if len(row) > 0 {
+					cols = append(cols, fmt.Sprintf("%.2f", row[len(row)-1]))
+				} else {
+					cols = append(cols, "")
+				}
+				contents = append(contents, cols)
+			}
+
+			// Render table manually to allow per-cell pivot background
+			// Build grid sizes (sum to 12)
+			nCols := len(headers)
+			gridTotal := 12
+			gridSizes := make([]uint, nCols)
+			if nCols == 1 {
+				gridSizes[0] = uint(gridTotal)
+			} else {
+				// give first two columns smaller width, distribute rest
+				first := 2
+				second := 2
+				remaining := gridTotal - first - second
+				per := 1
+				if nCols-2 > 0 {
+					per = remaining / (nCols - 2)
+				}
+				for i := 0; i < nCols; i++ {
+					if i == 0 {
+						gridSizes[i] = uint(first)
+					} else if i == 1 {
+						gridSizes[i] = uint(second)
+					} else if i == nCols-1 {
+						// last column takes the remainder
+						sum := 0
+						for j := 0; j < nCols-1; j++ {
+							sum += int(gridSizes[j])
+						}
+						gridSizes[i] = uint(gridTotal - sum)
+					} else {
+						gridSizes[i] = uint(per)
+					}
+				}
+			}
+
+			// Header row
+			headerHeight := 8.0
+			headerBg := props.Text{Top: 2, Align: "CENTER", Size: 10}
+			// enable borders (will draw black lines)
+			mPdf.SetBorder(true)
+			// draw header with background
+			mPdf.Row(headerHeight, func() {
+				for i, h := range headers {
+					gs := gridSizes[i]
+					mPdf.Col(gs, func() {
+						// header background
+						mPdf.SetBackgroundColor(color.Color{Red: 14, Green: 165, Blue: 233})
+						mPdf.Text(h, headerBg)
+						// reset background
+						mPdf.SetBackgroundColor(color.NewWhite())
+					})
+				}
+			})
+
+			// Content rows
+			contentHeight := 7.0
+			for rIdx, row := range contents {
+				mPdf.Row(contentHeight, func() {
+					for cIdx, cell := range row {
+						gs := gridSizes[cIdx]
+						mPdf.Col(gs, func() {
+							// if this is pivot cell, draw colored background
+							if rIdx == st.PivotRow && cIdx == st.PivotCol+2 { // +2 because contents include cb and Base cols
+								// pivot bubble background (blue)
+								mPdf.SetBackgroundColor(color.Color{Red: 59, Green: 130, Blue: 246})
+								// write cell in white
+								mPdf.Text(cell, props.Text{Top: 1, Align: "CENTER", Size: 9, Color: color.Color{Red: 255, Green: 255, Blue: 255}})
+								mPdf.SetBackgroundColor(color.NewWhite())
+							} else {
+								mPdf.Text(cell, props.Text{Top: 1, Align: "CENTER", Size: 9})
+							}
+						})
+					}
+				})
+			}
+			// disable borders after drawing table
+			mPdf.SetBorder(false)
+
+			// Summary line: entering / leaving / t
+			mPdf.Row(8, func() {
+				mPdf.Col(12, func() {
+					mPdf.Text(fmt.Sprintf("Entra: %d   Sale: %d   t: %.6f", st.EnteringVar, st.LeavingVar, st.TValue), props.Text{Top: 2, Align: "left", Size: 10})
+				})
+			})
+		}
+	}
+
 	// maroto.Output() devuelve (bytes.Buffer, error) en versiones recientes.
 	// Obtenemos el buffer y lo copiamos al writer proporcionado.
 	buf, err := mPdf.Output()
@@ -45,3 +207,5 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, w io.Writer) e
 	_, err = w.Write(buf.Bytes())
 	return err
 }
+
+// helper functions removed (not used)

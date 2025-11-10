@@ -11,6 +11,8 @@ import (
 
 	"autosimplex/internal/handler"
 	pdf "autosimplex/internal/pdf"
+	"autosimplex/internal/simplex"
+
 	"github.com/gin-gonic/gin"
 	"github.com/stretchr/testify/assert"
 )
@@ -60,7 +62,7 @@ func TestProcessPDFIntegration(t *testing.T) {
 	// adicional: intentar generar PDF directamente con GenerateSimplexPDF usando un writer
 	var buf bytes.Buffer
 	// usar valores de ejemplo: valor óptimo 1.23, solución [1,2,3]
-	err = pdf.GenerateSimplexPDF(1.23, []float64{1, 2, 3}, &buf)
+	err = pdf.GenerateSimplexPDF(1.23, []float64{1, 2, 3}, []simplex.SimplexStep{}, &buf)
 	assert.NoError(t, err)
 	assert.True(t, buf.Len() > 0)
 	assert.True(t, bytes.HasPrefix(buf.Bytes(), []byte("%PDF")))

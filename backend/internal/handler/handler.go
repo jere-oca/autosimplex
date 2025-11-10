@@ -72,7 +72,7 @@ func Process() func(c *gin.Context) {
 		if format == "pdf" {
 			c.Writer.Header().Set("Content-Type", "application/pdf")
 			c.Writer.Header().Set("Content-Disposition", "attachment; filename=resultado_simplex.pdf")
-			if err := pdf.GenerateSimplexPDF(result, solution, c.Writer); err != nil {
+			if err := pdf.GenerateSimplexPDF(result, solution, steps, c.Writer); err != nil {
 				c.JSON(http.StatusInternalServerError, gin.H{"error": err.Error()})
 			}
 			return
