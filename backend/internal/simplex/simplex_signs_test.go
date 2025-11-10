@@ -7,10 +7,10 @@ import (
 )
 
 func TestSimplexEqualityConstraint(t *testing.T) {
-	// Maximize 3 x1 + 2 x2
+	// Maximizar 3 x1 + 2 x2
 	maximize := mat.NewVecDense(2, []float64{3, 2})
 
-	// Constraint: x1 + x2 = 4
+	// Restricción: x1 + x2 = 4
 	constraints := mat.NewDense(1, 3, []float64{
 		1, 1, 4,
 	})
@@ -32,10 +32,10 @@ func TestSimplexEqualityConstraint(t *testing.T) {
 }
 
 func TestSimplexGreaterEqualConstraint(t *testing.T) {
-	// Maximize 2 x1 + 1 x2
+	// Maximizar 2 x1 + 1 x2
 	maximize := mat.NewVecDense(2, []float64{2, 1})
 
-	// Constraints:
+	// Restricciones:
 	// x1 + x2 >= 3
 	// x1 <= 2
 	// x2 <= 3
