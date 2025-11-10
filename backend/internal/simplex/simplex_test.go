@@ -19,7 +19,7 @@ func CompareFloat64Slice(a []float64, b []float64) bool {
 }
 
 func TestSimplexPositives(t *testing.T) {
-	// create new example matrix
+	// crear nueva matriz de ejemplo
 	maximize := mat.NewVecDense(3, []float64{5, 4, 3})
 
 	constraints := mat.NewDense(3, 4, []float64{
@@ -36,7 +36,7 @@ func TestSimplexPositives(t *testing.T) {
 }
 
 func TestSimplexNegatives(t *testing.T) {
-	// create new example matrix
+	// crear nueva matriz de ejemplo
 	maximize := mat.NewVecDense(4, []float64{6, -9, 1, -11})
 
 	constraints := mat.NewDense(2, 5, []float64{
@@ -51,7 +51,7 @@ func TestSimplexNegatives(t *testing.T) {
 	}
 }
 func TestSimplexFractions(t *testing.T) {
-	// create new example matrix
+	// crear nueva matriz de ejemplo
 	maximize := mat.NewVecDense(4, []float64{3.2, .75, 5, 7.8})
 
 	constraints := mat.NewDense(4, 5, []float64{

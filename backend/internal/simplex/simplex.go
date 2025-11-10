@@ -7,7 +7,7 @@ import (
 	"gonum.org/v1/gonum/mat"
 )
 
-// Solve is a convenience wrapper that assumes all constraints are "<=".
+// Solve es una función auxiliar que asume que todas las restricciones son "<=".
 func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []SimplexStep, string) {
 	rows, _ := constraints.Dims()
 	signs := make([]string, rows)
@@ -17,9 +17,9 @@ func Solve(maximize mat.Vector, constraints *mat.Dense) (float64, []float64, []S
 	return SolveWithSigns(maximize, constraints, signs)
 }
 
-// SolveWithSigns solves a maximization LP given an objective vector and a
-// constraint matrix (rows are [a1 ... an b]). 'signs' contains one of
-// "<=", ">=", or "=" per constraint. Uses a Big-M strategy for artificials.
+// SolveWithSigns resuelve un problema de maximización de PL dado un vector objetivo y una
+// matriz de restricciones (las filas son [a1 ... an b]). 'signs' contiene uno de
+// "<=", ">=", o "=" por restricción. Usa una estrategia Big-M para variables artificiales.
 func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string) (float64, []float64, []SimplexStep, string) {
 	const M = 1e7
 	var steps []SimplexStep
@@ -31,8 +31,8 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		return 0, nil, steps, warning
 	}
 
-	// Count extra variables and build extended A matrix
-	// We'll add slack (for <=), surplus+artificial (for >=), and artificial (for =)
+	// Contar variables extra y construir matriz A extendida
+	// Agregaremos holgura (para <=), exceso+artificial (para >=), y artificial (para =)
 	extraCols := 0
 	for i := range m {
 		s := "<="
@@ -41,9 +41,9 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		}
 		switch s {
 		case "<=":
-			extraCols += 1 // slack
+			extraCols += 1 // holgura
 		case ">=":
-			extraCols += 2 // surplus + artificial
+			extraCols += 2 // exceso + artificial
 		case "=":
 			extraCols += 1 // artificial
 		default:
@@ -53,18 +53,18 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 
 	totalVars := n + extraCols
 
-	// Build A_extended
+	// Construir A_extendida
 	A := mat.NewDense(m, totalVars, nil)
-	// Fill original variables
+	// Llenar variables originales
 	for i := range m {
 		for j := range n {
 			A.Set(i, j, constraints.At(i, j))
 		}
 	}
 
-	// Track indices and base variable per row
+	// Rastrear índices y variable base por fila
 	col := n
-	baseVars := make([]int, m) // 1-based indices of basic vars per row
+	baseVars := make([]int, m) // índices base 1 de variables básicas por fila
 	artIndices := []int{}
 	for i := range m {
 		s := "<="
@@ -77,7 +77,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			baseVars[i] = col + 1
 			col++
 		case ">=":
-			// surplus
+			// exceso
 			A.Set(i, col, -1)
 			col++
 			// artificial
@@ -98,7 +98,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		}
 	}
 
-	// Build objective c (1 x totalVars). Artificial variables get -M penalty
+	// Construir objetivo c (1 x totalVars). Variables artificiales obtienen penalidad -M
 	c := mat.NewDense(1, totalVars, make([]float64, totalVars))
 	for j := range n {
 		c.Set(0, j, maximize.At(j, 0))
@@ -107,15 +107,15 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		c.Set(0, ai, -M)
 	}
 
-	// Build b vector
+	// Construir vector b
 	bData := make([]float64, m)
 	for i := range m {
 		bData[i] = constraints.At(i, n)
 	}
 	b := mat.NewVecDense(m, bData)
 
-	// Now proceed with simplex iterations similar to prior implementation,
-	// but using our constructed A, c, b and the provided baseVars.
+	// Ahora proceder con iteraciones simplex similar a implementación anterior,
+	// pero usando nuestras A, c, b y baseVars construidas.
 	ATrans := mat.DenseCopyOf(A.T())
 
 	const maxIter = 200
@@ -125,32 +125,32 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			break
 		}
 
-		// Build B from baseVars
+		// Construir B desde baseVars
 		B := mat.NewDense(m, m, nil)
 		cB := make([]float64, m)
 		for i := range m {
-			// baseVars stores 1-based index
+			// baseVars almacena índice base 1
 			B.SetCol(i, ATrans.RawRowView(baseVars[i]-1))
 			cB[i] = c.At(0, baseVars[i]-1)
 		}
 
-		// Solve B^T * y = cB  (y is column)
+		// Resolver B^T * y = cB  (y es columna)
 		var lu mat.LU
 		lu.Factorize(B)
 		yCol := mat.NewVecDense(m, nil)
 		cBVec := mat.NewVecDense(m, cB)
 		if err := lu.SolveVecTo(yCol, true, cBVec); err != nil {
-			// singular base -> infeasible
+			// base singular -> infactible
 			warning := "Matriz singular, problema infactible o mal planteado"
 			return 0, nil, steps, warning
 		}
-		// y as row
+		// y como fila
 		y := mat.NewDense(1, m, nil)
 		for i := range m {
 			y.Set(0, i, yCol.AtVec(i))
 		}
 
-		// Build AN and cN for non-basic vars
+		// Construir AN y cN para variables no básicas
 		var nonBase []int
 		for j := 1; j <= totalVars; j++ {
 			if !contains(baseVars, j) {
@@ -164,11 +164,11 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			cN.SetCol(i, []float64{c.At(0, nonBase[i]-1)})
 		}
 
-		// Reduced costs: cN - y * AN
+		// Costos reducidos: cN - y * AN
 		yAN := mat.NewDense(1, len(nonBase), nil)
 		yAN.Mul(y, AN)
 
-		// Choose entering variable: any index where cN > yAN
+		// Elegir variable entrante: cualquier índice donde cN > yAN
 		entering := -1
 		enteringVal := 0.0
 		for i := range nonBase {
@@ -212,13 +212,13 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			}
 
 			// Si llegamos aquí, la solución es óptima
-			// Build solution for original variables
+			// Construir solución para variables originales
 			solution := make([]float64, n)
 			var optimal float64
 			for i := range m {
 				bv := baseVars[i] - 1
 				if bv < n {
-					// original variable
+					// variable original
 					val := b.At(i, 0)
 					solution[bv] = val
 					optimal += c.At(0, bv) * val
@@ -234,21 +234,21 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 
 		enteringVar := nonBase[entering]
 
-		// Get column a for enteringVar
+		// Obtener columna a para enteringVar
 		raw := ATrans.RawRowView(enteringVar - 1)
 		aVec := mat.NewVecDense(m, nil)
 		for i := range m {
 			aVec.SetVec(i, raw[i])
 		}
 
-		// Solve d = B^{-1} * aVec using LU
+		// Resolver d = B^{-1} * aVec usando LU
 		dVec := mat.NewVecDense(m, nil)
 		if err := lu.SolveVecTo(dVec, false, aVec); err != nil {
 			warning := "Solución no única, problema infactible o degenerado"
 			return 0, nil, steps, warning
 		}
 
-		// Ratio test b_i / d_i for d_i > 0
+		// Prueba de razón b_i / d_i para d_i > 0
 		minRatio := math.Inf(1)
 		leavingIndex := -1
 		for i := range m {
@@ -266,7 +266,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			return 0, nil, steps, warning
 		}
 
-		// Prepare step
+		// Preparar paso
 		currentBaseVars := append([]int{}, baseVars...)
 		currentNonBaseVars := append([]int{}, nonBase...)
 		reducedCosts := matDenseToSlice(yAN)
@@ -275,17 +275,17 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		leavingVar := baseVars[leavingIndex]
 		lowestValueOfT := minRatio
 
-		// Build full tableau: for each variable column j, compute B^{-1} * A[:, j]
-		// tableau rows will contain coefficients for each variable and final RHS
+		// Construir tableau completo: para cada columna de variable j, calcular B^{-1} * A[:, j]
+		// las filas del tableau contendrán coeficientes para cada variable y el RHS final
 		tableRows := make([][]float64, m)
 		for i := 0; i < m; i++ {
-			tableRows[i] = make([]float64, totalVars+1) // +1 for R
+			tableRows[i] = make([]float64, totalVars+1) // +1 para R
 		}
-		// cj header
+		// encabezado cj
 		cj := make([]float64, totalVars)
 		for j := 0; j < totalVars; j++ {
 			cj[j] = c.At(0, j)
-			// solve B^{-1} * A[:, j]
+			// resolver B^{-1} * A[:, j]
 			rawCol := ATrans.RawRowView(j)
 			colVec := mat.NewVecDense(m, nil)
 			aVec := mat.NewVecDense(m, nil)
@@ -293,7 +293,7 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 				aVec.SetVec(i, rawCol[i])
 			}
 			if err := lu.SolveVecTo(colVec, false, aVec); err != nil {
-				// if solve fails, fill zeros and continue
+				// si la resolución falla, llenar con ceros y continuar
 				for i := 0; i < m; i++ {
 					tableRows[i][j] = 0
 				}
@@ -303,12 +303,12 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 				}
 			}
 		}
-		// fill RHS column
+		// llenar columna RHS
 		for i := 0; i < m; i++ {
 			tableRows[i][totalVars] = b.At(i, 0)
 		}
 
-		// cb: objective coeffs of basic variables
+		// cb: coeficientes objetivo de variables básicas
 		cb := make([]float64, m)
 		for i := 0; i < m; i++ {
 			cb[i] = c.At(0, currentBaseVars[i]-1)
@@ -331,9 +331,9 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		}
 		steps = append(steps, step)
 
-		// Update base: replace baseVars[leavingIndex] with enteringVar
-		// Update b vector
-		// Compute theta = minRatio
+		// Actualizar base: reemplazar baseVars[leavingIndex] con enteringVar
+		// Actualizar vector b
+		// Calcular theta = minRatio
 		theta := minRatio
 		for i := range m {
 			if i == leavingIndex {

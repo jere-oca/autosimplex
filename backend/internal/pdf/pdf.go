@@ -49,15 +49,15 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 		})
 
 		for _, st := range steps {
-			// Iteration header
+			// Iteracción
 			mPdf.Row(10, func() {
 				mPdf.Col(12, func() {
 					mPdf.Text(fmt.Sprintf("Iteración %d", st.Iteration), props.Text{Top: 2, Align: "left", Size: 12})
 				})
 			})
 
-			// Render a compact tableau-like representation as monospaced formatted lines
-			// Header: cj
+			// Renderizar una representación compacta tipo tableau con líneas formateadas monoespacio
+			// Encabezado: cj
 			if len(st.Cj) > 0 {
 				line := "cj:"
 				for _, v := range st.Cj {
@@ -70,8 +70,8 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 				})
 			}
 
-			// Table header
-			// Try rendering a table using Maroto TableList for nicer visual style
+			// Encabezado de tabla
+			// Intentar renderizar una tabla usando Maroto TableList para un estilo visual más agradable
 			headers := []string{"c_b", "Base"}
 			if len(st.Table) > 0 {
 				for j := 0; j < len(st.Table[0])-1; j++ {
@@ -102,7 +102,7 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 					}
 					cols = append(cols, cell)
 				}
-				// RHS
+				// Lado derecho (RHS)
 				if len(row) > 0 {
 					cols = append(cols, fmt.Sprintf("%.2f", row[len(row)-1]))
 				} else {
@@ -111,15 +111,15 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 				contents = append(contents, cols)
 			}
 
-			// Render table manually to allow per-cell pivot background
-			// Build grid sizes (sum to 12)
+			// Renderizar tabla manualmente para permitir fondo de celda pivote
+			// Construir tamaños de cuadrícula (suma a 12)
 			nCols := len(headers)
 			gridTotal := 12
 			gridSizes := make([]uint, nCols)
 			if nCols == 1 {
 				gridSizes[0] = uint(gridTotal)
 			} else {
-				// give first two columns smaller width, distribute rest
+				// dar a las primeras dos columnas ancho más pequeño, distribuir el resto
 				first := 2
 				second := 2
 				remaining := gridTotal - first - second
@@ -133,7 +133,7 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 					} else if i == 1 {
 						gridSizes[i] = uint(second)
 					} else if i == nCols-1 {
-						// last column takes the remainder
+						// última columna toma el resto
 						sum := 0
 						for j := 0; j < nCols-1; j++ {
 							sum += int(gridSizes[j])
@@ -145,37 +145,37 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 				}
 			}
 
-			// Header row
+			// Fila de encabezado
 			headerHeight := 8.0
 			headerBg := props.Text{Top: 2, Align: "CENTER", Size: 10}
-			// enable borders (will draw black lines)
+			// habilitar bordes (dibujará líneas negras)
 			mPdf.SetBorder(true)
-			// draw header with background
+			// dibujar encabezado con fondo
 			mPdf.Row(headerHeight, func() {
 				for i, h := range headers {
 					gs := gridSizes[i]
 					mPdf.Col(gs, func() {
-						// header background
+						// fondo del encabezado
 						mPdf.SetBackgroundColor(color.Color{Red: 14, Green: 165, Blue: 233})
 						mPdf.Text(h, headerBg)
-						// reset background
+						// restablecer fondo
 						mPdf.SetBackgroundColor(color.NewWhite())
 					})
 				}
 			})
 
-			// Content rows
+			// Filas de contenido
 			contentHeight := 7.0
 			for rIdx, row := range contents {
 				mPdf.Row(contentHeight, func() {
 					for cIdx, cell := range row {
 						gs := gridSizes[cIdx]
 						mPdf.Col(gs, func() {
-							// if this is pivot cell, draw colored background
-							if rIdx == st.PivotRow && cIdx == st.PivotCol+2 { // +2 because contents include cb and Base cols
-								// pivot bubble background (blue)
+							// si esta es la celda pivote, dibujar fondo coloreado
+							if rIdx == st.PivotRow && cIdx == st.PivotCol+2 { // +2 porque contents incluye columnas cb y Base
+								// fondo de burbuja pivote (azul)
 								mPdf.SetBackgroundColor(color.Color{Red: 59, Green: 130, Blue: 246})
-								// write cell in white
+								// escribir celda en blanco
 								mPdf.Text(cell, props.Text{Top: 1, Align: "CENTER", Size: 9, Color: color.Color{Red: 255, Green: 255, Blue: 255}})
 								mPdf.SetBackgroundColor(color.NewWhite())
 							} else {
@@ -185,10 +185,10 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 					}
 				})
 			}
-			// disable borders after drawing table
+			// deshabilitar bordes después de dibujar tabla
 			mPdf.SetBorder(false)
 
-			// Summary line: entering / leaving / t
+			// Línea de resumen: entrante / saliente / t
 			mPdf.Row(8, func() {
 				mPdf.Col(12, func() {
 					mPdf.Text(fmt.Sprintf("Entra: %d   Sale: %d   t: %.6f", st.EnteringVar, st.LeavingVar, st.TValue), props.Text{Top: 2, Align: "left", Size: 10})
@@ -208,4 +208,4 @@ func GenerateSimplexPDF(optimalValue float64, solution []float64, steps []simple
 	return err
 }
 
-// helper functions removed (not used)
+// funciones auxiliares eliminadas (no usadas)

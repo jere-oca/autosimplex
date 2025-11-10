@@ -26,8 +26,8 @@ func Process() func(c *gin.Context) {
 		if validateReqObjective(c, n, coefs, req.Objective.Type) {
 			return
 		}
-		// Build objective vector. If the request asks to minimize, convert
-		// the problem into a maximization by negating the coefficients.
+		// Construir vector objetivo. Si la solicitud pide minimizar, convertir
+		// el problema en una maximización negando los coeficientes.
 		objective := mat.NewVecDense(n, coefs)
 		isMinimize := strings.ToLower(strings.TrimSpace(req.Objective.Type)) == "minimize"
 		var maximizeVec *mat.VecDense
@@ -50,7 +50,7 @@ func Process() func(c *gin.Context) {
 		}
 		constraintMatrix := mat.NewDense(rows, cols, vars)
 
-		// Build signs slice: use provided signs if any, otherwise default to "<=" for all rows
+		// Construir slice de signos: usar signos proporcionados si existen, sino usar "<=" por defecto
 		signs := req.Constraints.Signs
 		if len(signs) == 0 {
 			signs = make([]string, rows)
@@ -61,8 +61,8 @@ func Process() func(c *gin.Context) {
 
 		result, solution, steps, warning := simplex.SolveWithSigns(maximizeVec, constraintMatrix, signs)
 
-		// If it was a minimization request, invert the returned optimal value
-		// because we solved the equivalent maximization of -c.
+		// Si fue una solicitud de minimización, invertir el valor óptimo retornado
+		// porque resolvimos la maximización equivalente de -c.
 		if isMinimize {
 			result = -result
 		}
