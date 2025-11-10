@@ -275,6 +275,75 @@ export function App() {
 							>
 								📄 Descargar resultado en PDF
 							</button>
+
+							{/* Sección: tablas intermedias con tabla estilo tableau */}
+							{result.steps && result.steps.length > 0 && (
+								<div class="steps-section">
+									<h3>Tablas intermedias</h3>
+									{result.steps.map((step, idx) => {
+										const totalVars = step.cj ? step.cj.length : 0;
+										const n = result.solution ? result.solution.length : 0;
+										// build variable names: X1..Xn then S1..Sextra
+										const varNames = [] as string[];
+										for (let i = 0; i < totalVars; i++) {
+											if (i < n) varNames.push(`X${i + 1}`);
+											else varNames.push(`S${i - n + 1}`);
+										}
+										return (
+											<div key={idx} class="step-block">
+												<h4>Iteración {step.iteration}</h4>
+												{/* CJ row */}
+												<table class="simplex-table">
+													<thead>
+														<tr class="cj-row">
+															<th></th>
+															<th></th>
+															{(step.cj || []).map((v: number, j: number) => (
+																<th key={j} class="cj-cell">{v.toFixed(2)}</th>
+															))}
+															<th>R</th>
+														</tr>
+														<tr class="varnames-row">
+															<th>c_b</th>
+															<th>Base</th>
+															{varNames.map((vn, j) => (
+																<th key={j}>{vn}</th>
+															))}
+															<th>R</th>
+														</tr>
+													</thead>
+													<tbody>
+														{(step.table || []).map((row: number[], rIdx: number) => (
+															<tr key={rIdx}>
+																<td class="cb-cell">{(step.cb && step.cb[rIdx] != null) ? step.cb[rIdx].toFixed(2) : ''}</td>
+																<td class="base-cell">
+																	{(() => {
+																	const bv = step.base_variables?.[rIdx];
+																	if (!bv) return '';
+																	if (bv <= n) return `X${bv}`;
+																	return `S${bv - n}`;
+																})()}
+																</td>
+																{row.slice(0, totalVars).map((cell: number, cIdx: number) => (
+																	<td key={cIdx} className={(step.pivot_row === rIdx && step.pivot_col === cIdx) ? 'pivot' : ''}>{cell.toFixed(2)}</td>
+																))}
+																<td class="r-cell">{row[totalVars] != null ? row[totalVars].toFixed(2) : ''}</td>
+															</tr>
+														))}
+													</tbody>
+												</table>
+												{/* Message box */}
+												<div class="pivot-message">
+													Ingresa la variable <strong>{step.entering_var <= n ? `X${step.entering_var}` : `S${step.entering_var - n}`}</strong> y sale de la base la variable <strong>{step.leaving_var <= n ? `X${step.leaving_var}` : `S${step.leaving_var - n}`}</strong>. El elemento pivote es <strong>{(() => {
+														const pv = (step.table && step.table[step.pivot_row]) ? step.table[step.pivot_row][step.pivot_col] : null;
+														return pv != null ? pv.toFixed(2) : step.t_value?.toFixed?.(2) || '';
+													})()}</strong>
+												</div>
+											</div>
+										);
+									})}
+								</div>
+							)}
 						</div>
 					)}
 				</div>

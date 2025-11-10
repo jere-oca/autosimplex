@@ -242,6 +242,45 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 		leavingVar := baseVars[leavingIndex]
 		lowestValueOfT := minRatio
 
+		// Build full tableau: for each variable column j, compute B^{-1} * A[:, j]
+		// tableau rows will contain coefficients for each variable and final RHS
+		tableRows := make([][]float64, m)
+		for i := 0; i < m; i++ {
+			tableRows[i] = make([]float64, totalVars+1) // +1 for R
+		}
+		// cj header
+		cj := make([]float64, totalVars)
+		for j := 0; j < totalVars; j++ {
+			cj[j] = c.At(0, j)
+			// solve B^{-1} * A[:, j]
+			rawCol := ATrans.RawRowView(j)
+			colVec := mat.NewVecDense(m, nil)
+			aVec := mat.NewVecDense(m, nil)
+			for i := 0; i < m; i++ {
+				aVec.SetVec(i, rawCol[i])
+			}
+			if err := lu.SolveVecTo(colVec, false, aVec); err != nil {
+				// if solve fails, fill zeros and continue
+				for i := 0; i < m; i++ {
+					tableRows[i][j] = 0
+				}
+			} else {
+				for i := 0; i < m; i++ {
+					tableRows[i][j] = colVec.AtVec(i)
+				}
+			}
+		}
+		// fill RHS column
+		for i := 0; i < m; i++ {
+			tableRows[i][totalVars] = b.At(i, 0)
+		}
+
+		// cb: objective coeffs of basic variables
+		cb := make([]float64, m)
+		for i := 0; i < m; i++ {
+			cb[i] = c.At(0, currentBaseVars[i]-1)
+		}
+
 		step := SimplexStep{
 			Iteration:        iter,
 			BaseVariables:    currentBaseVars,
@@ -251,6 +290,11 @@ func SolveWithSigns(maximize mat.Vector, constraints *mat.Dense, signs []string)
 			EnteringVar:      newBaseVar,
 			LeavingVar:       leavingVar,
 			TValue:           lowestValueOfT,
+			Table:            tableRows,
+			Cj:               cj,
+			Cb:               cb,
+			PivotRow:         leavingIndex,
+			PivotCol:         enteringVar - 1,
 		}
 		steps = append(steps, step)
 
