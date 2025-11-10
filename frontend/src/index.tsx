@@ -6,10 +6,10 @@ export function App() {
 	const [numVariables, setNumVariables] = useState(2);
 	const [numConstraints, setNumConstraints] = useState(2);
 	const [objective, setObjective] = useState([1, 1]);
-	const [objectiveType, setObjectiveType] = useState('maximize');
+	const [objectiveType, setObjectiveType] = useState<'maximize' | 'minimize'>('maximize');
 	const [constraints, setConstraints] = useState([[1, 1, 1], [1, 2, 2]]);
 	const [constraintSigns, setConstraintSigns] = useState<string[]>(Array(2).fill("<="));
-	const [result, setResult] = useState(null);
+	const [result, setResult] = useState<any>(null);
 	const [loading, setLoading] = useState(false);
 
 	const updateObjective = (index: number, value: string) => {
@@ -101,6 +101,48 @@ export function App() {
 		setLoading(false);
 	};
 
+	const downloadPDF = async () => {
+		const requestBody = {
+			objective: {
+				n: numVariables,
+				coefficients: objective,
+				type: objectiveType
+			},
+			constraints: {
+				rows: numConstraints,
+				cols: numVariables + 1,
+				vars: constraints.flat(),
+				signs: constraintSigns
+			}
+		};
+
+		try {
+			const response = await fetch('/process?format=pdf', {
+				method: 'POST',
+				headers: {
+					'Content-Type': 'application/json',
+				},
+				body: JSON.stringify(requestBody)
+			});
+
+			if (response.ok) {
+				const blob = await response.blob();
+				const url = window.URL.createObjectURL(blob);
+				const a = document.createElement('a');
+				a.href = url;
+				a.download = 'resultado_simplex.pdf';
+				document.body.appendChild(a);
+				a.click();
+				window.URL.revokeObjectURL(url);
+				document.body.removeChild(a);
+			} else {
+				alert('Error al generar el PDF');
+			}
+		} catch (error) {
+			alert('Error de conexión con el servidor');
+		}
+	};
+
 	return (
 		<div class="container">
 			<h1>Autosimplex - Método Simplex</h1>
@@ -114,7 +156,8 @@ export function App() {
 							type="number" 
 							value={numVariables} 
 							min="1" 
-							max="10"
+							max="100"
+							step="1"
 							onChange={(e) => handleVariablesChange((e.target as HTMLInputElement).value)}
 						/>
 					</label>
@@ -124,7 +167,8 @@ export function App() {
 							type="number" 
 							value={numConstraints} 
 							min="1" 
-							max="10"
+							max="100"
+							step="1"
 							onChange={(e) => handleConstraintsChange((e.target as HTMLInputElement).value)}
 						/>
 					</label>
@@ -135,10 +179,10 @@ export function App() {
 				<h2>Función objetivo ({objectiveType === 'maximize' ? 'maximizar' : 'minimizar'})</h2>
 				<div class="objective-type">
 					<label>
-						<input type="radio" name="objectiveType" value="maximize" checked={objectiveType === 'maximize'} onChange={(e) => setObjectiveType((e.target as HTMLInputElement).value)} /> Maximizar
+						<input type="radio" name="objectiveType" value="maximize" checked={objectiveType === 'maximize'} onChange={(e) => setObjectiveType((e.target as HTMLInputElement).value as 'maximize' | 'minimize')} /> Maximizar
 					</label>
 					<label>
-						<input type="radio" name="objectiveType" value="minimize" checked={objectiveType === 'minimize'} onChange={(e) => setObjectiveType((e.target as HTMLInputElement).value)} /> Minimizar
+						<input type="radio" name="objectiveType" value="minimize" checked={objectiveType === 'minimize'} onChange={(e) => setObjectiveType((e.target as HTMLInputElement).value as 'maximize' | 'minimize')} /> Minimizar
 					</label>
 				</div>
 				<div class="objective-inputs">
@@ -217,15 +261,32 @@ export function App() {
 					{result.error ? (
 						<div class="error">{result.error}</div>
 					) : (
-						<div class="success">
-							<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
-							<p><strong>Solución:</strong></p>
-							<ul>
-								{result.solution?.map((value, index) => (
-									<li key={index}>x<sub>{index + 1}</sub> = {value.toFixed(4)}</li>
-								))}
-							</ul>
-						</div>
+						<>
+							{result.warning && result.warning.trim() !== '' && (
+								<div class="warning-box">
+									<div class="warning-icon">⚠️</div>
+									<div class="warning-content">
+										<h3>Advertencia</h3>
+										<p>{result.warning}</p>
+									</div>
+								</div>
+							)}
+							<div class="success">
+								<p><strong>Valor óptimo:</strong> {result.optimal_value}</p>
+								<p><strong>Solución:</strong></p>
+								<ul>
+									{result.solution?.map((value, index) => (
+										<li key={index}>x<sub>{index + 1}</sub> = {value.toFixed(4)}</li>
+									))}
+								</ul>
+								<button 
+									class="download-pdf-button" 
+									onClick={downloadPDF}
+								>
+									📄 Descargar resultado en PDF
+								</button>
+							</div>
+						</>
 					)}
 				</div>
 			)}

@@ -3,6 +3,9 @@
   --primary-dark: #2563eb;
   --success-color: #10b981;
   --error-color: #ef4444;
+  --warning-color: #f59e0b;
+  --warning-bg: #fffbeb;
+  --warning-border: #fbbf24;
   --border-color: #e5e7eb;
   --text-color: #374151;
   --bg-color: #f9fafb;
@@ -184,6 +187,91 @@ input[type="number"]:focus {
   border-bottom: 1px solid rgba(16, 185, 129, 0.2);
 }
 
+.download-pdf-button {
+  background: #10b981;
+  color: white;
+  border: none;
+  padding: 0.75rem 1.5rem;
+  border-radius: 8px;
+  font-size: 1rem;
+  font-weight: 600;
+  cursor: pointer;
+  margin-top: 1rem;
+  transition: background-color 0.2s, transform 0.1s;
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.download-pdf-button:hover {
+  background: #059669;
+  transform: translateY(-1px);
+}
+
+.download-pdf-button:active {
+  transform: translateY(0);
+}
+
+/* Estilos para la caja de advertencia */
+.warning-box {
+  background: var(--warning-bg);
+  border: 3px solid var(--warning-border);
+  border-left: 6px solid var(--warning-color);
+  border-radius: 8px;
+  padding: 1.5rem;
+  margin-bottom: 1.5rem;
+  display: flex;
+  gap: 1rem;
+  align-items: flex-start;
+  box-shadow: 0 2px 8px rgba(245, 158, 11, 0.15);
+  animation: slideIn 0.3s ease-out;
+}
+
+@keyframes slideIn {
+  from {
+    opacity: 0;
+    transform: translateY(-10px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+.warning-icon {
+  font-size: 2rem;
+  flex-shrink: 0;
+  animation: pulse 2s ease-in-out infinite;
+}
+
+@keyframes pulse {
+  0%, 100% {
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+}
+
+.warning-content {
+  flex: 1;
+}
+
+.warning-content h3 {
+  margin: 0 0 0.5rem 0;
+  color: #92400e;
+  font-size: 1.2rem;
+  font-weight: 700;
+}
+
+.warning-content p {
+  margin: 0;
+  color: #78350f;
+  font-size: 1rem;
+  line-height: 1.5;
+  font-weight: 500;
+}
+
 @media (max-width: 768px) {
   .container {
     padding: 1rem;
@@ -204,5 +292,15 @@ input[type="number"]:focus {
   
   .constraint-input input {
     width: 60px;
+  }
+  
+  .warning-box {
+    flex-direction: column;
+    align-items: center;
+    text-align: center;
+  }
+  
+  .warning-icon {
+    font-size: 2.5rem;
   }
 }
